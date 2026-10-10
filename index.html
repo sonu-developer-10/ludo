@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Royal Ludo King</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Yatra+One&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -26,7 +27,6 @@
             letter-spacing: 1px;
         }
 
-        /* Gold metallic text effect */
         .gold-text {
             background: linear-gradient(135deg, #ffe066 0%, #f5af19 50%, #e65c00 100%);
             -webkit-background-clip: text;
@@ -42,7 +42,6 @@
             position: relative;
         }
 
-        /* Dice 3D Cube CSS for Corner Cards */
         .scene {
             width: 46px;
             height: 46px;
@@ -82,7 +81,6 @@
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
         }
 
-        /* Dot placements for each face */
         .face-1 .dot { grid-area: 2 / 2; background: #d32f2f; width: 10px; height: 10px; }
 
         .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
@@ -174,12 +172,12 @@
         
         <!-- TOP PLAYER CARDS (RED Left, GREEN Right) -->
         <div class="w-full max-w-[500px] flex items-center justify-between gap-2 mb-2">
-            <!-- PLAYER 0 (RED - Top Left) -->
+            <!-- PLAYER 0 (RED) -->
             <div id="playerCard-0" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-red-600/50 shadow-lg transition-all duration-300 opacity-45">
                 <div class="flex items-center space-x-2">
                     <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-red-600 text-white">🔴</div>
                     <div class="leading-tight">
-                        <div class="font-bold text-xs md:text-sm text-red-400 flex items-center gap-1">
+                        <div id="pName-0" class="font-bold text-xs md:text-sm text-red-400 flex items-center gap-1">
                             Red <span id="score-0" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
                         </div>
                         <div id="pStatus-0" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
@@ -204,12 +202,12 @@
                 </div>
             </div>
 
-            <!-- PLAYER 1 (GREEN - Top Right) -->
+            <!-- PLAYER 1 (GREEN) -->
             <div id="playerCard-1" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-green-600/50 shadow-lg transition-all duration-300 opacity-45">
                 <div class="flex items-center space-x-2">
                     <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-green-600 text-white">🟢</div>
                     <div class="leading-tight">
-                        <div class="font-bold text-xs md:text-sm text-green-400 flex items-center gap-1">
+                        <div id="pName-1" class="font-bold text-xs md:text-sm text-green-400 flex items-center gap-1">
                             Green <span id="score-1" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
                         </div>
                         <div id="pStatus-1" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
@@ -237,18 +235,17 @@
 
         <div class="board-frame p-2 md:p-3 rounded-2xl w-full max-w-[500px] aspect-square flex items-center justify-center relative shadow-2xl">
             <canvas id="gameCanvas" width="600" height="600" class="w-full h-full cursor-pointer"></canvas>
-            
             <div id="toastContainer" class="absolute inset-0 pointer-events-none flex items-center justify-center z-20"></div>
         </div>
 
         <!-- BOTTOM PLAYER CARDS (BLUE Left, YELLOW Right) -->
         <div class="w-full max-w-[500px] flex items-center justify-between gap-2 mt-2">
-            <!-- PLAYER 3 (BLUE - Bottom Left) -->
+            <!-- PLAYER 3 (BLUE) -->
             <div id="playerCard-3" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-blue-600/50 shadow-lg transition-all duration-300 opacity-45">
                 <div class="flex items-center space-x-2">
                     <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-blue-600 text-white">🔵</div>
                     <div class="leading-tight">
-                        <div class="font-bold text-xs md:text-sm text-blue-400 flex items-center gap-1">
+                        <div id="pName-3" class="font-bold text-xs md:text-sm text-blue-400 flex items-center gap-1">
                             Blue <span id="score-3" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
                         </div>
                         <div id="pStatus-3" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
@@ -273,12 +270,12 @@
                 </div>
             </div>
 
-            <!-- PLAYER 2 (YELLOW - Bottom Right) -->
+            <!-- PLAYER 2 (YELLOW) -->
             <div id="playerCard-2" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-yellow-600/50 shadow-lg transition-all duration-300 opacity-45">
                 <div class="flex items-center space-x-2">
                     <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-yellow-500 text-white">🟡</div>
                     <div class="leading-tight">
-                        <div class="font-bold text-xs md:text-sm text-yellow-400 flex items-center gap-1">
+                        <div id="pName-2" class="font-bold text-xs md:text-sm text-yellow-400 flex items-center gap-1">
                             Yellow <span id="score-2" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
                         </div>
                         <div id="pStatus-2" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
@@ -305,11 +302,12 @@
         </div>
     </main>
 
+    <!-- MAIN GAME SETUP MODAL -->
     <div id="setupModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50">
         <div class="bg-gradient-to-b from-yellow-950 to-stone-900 border-4 border-yellow-500/80 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative">
             <div class="text-5xl mb-2">👑</div>
             <h2 class="text-3xl font-heading font-bold gold-text uppercase tracking-wider mb-1">Royal Ludo</h2>
-            <p class="text-xs text-amber-200/70 mb-5">Select game mode and player count to start the match</p>
+            <p class="text-xs text-amber-200/70 mb-5">Select game mode and options to start match</p>
 
             <!-- Mode Selector -->
             <div class="mb-4 text-left">
@@ -337,7 +335,7 @@
                 <!-- Create Room Sub-Panel -->
                 <div id="createRoomPanel">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
-                    <input type="text" id="playerNameInput" value="King Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="playerNameInput" value="Player 1" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 focus:outline-none focus:border-yellow-400">
                     <button type="button" onclick="window.createOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
                         ➕ CREATE ROOM CODE
                     </button>
@@ -346,9 +344,9 @@
                 <!-- Join Room Sub-Panel -->
                 <div id="joinRoomPanel" class="hidden">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
-                    <input type="text" id="joinPlayerNameInput" value="Friend Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-2 focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="joinPlayerNameInput" value="Player 2" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-2 focus:outline-none focus:border-yellow-400">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Enter 5-Digit Room Code</label>
-                    <input type="text" id="roomCodeInput" placeholder="e.g. LUDO-1234" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 uppercase tracking-wider focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="roomCodeInput" placeholder="e.g. 84920" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 uppercase tracking-wider focus:outline-none focus:border-yellow-400">
                     <button type="button" onclick="window.joinOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
                         🔗 JOIN ROOM MATCH
                     </button>
@@ -361,7 +359,7 @@
                         <button type="button" onclick="window.copyRoomCode()" class="px-2 py-1 bg-amber-700 hover:bg-amber-600 text-xs font-bold rounded text-white shadow">📋 Copy</button>
                     </div>
                     <p id="lobbyStatusMsg" class="text-[10px] text-amber-200/80 mb-2">Waiting for friends to join...</p>
-                    <div id="connectedPlayersList" class="flex flex-col gap-1 mb-3 text-xs text-left"></div>
+                    <div id="connectedPlayersList" class="flex flex-col gap-1 mb-3 text-xs text-left font-mono"></div>
                 </div>
             </div>
 
@@ -400,6 +398,7 @@
         </div>
     </div>
 
+    <!-- VICTORY MODAL -->
     <div id="victoryModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-gradient-to-b from-yellow-900 via-amber-950 to-black border-4 border-yellow-400 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative overflow-hidden">
             <div class="text-6xl mb-3 animate-bounce">👑</div>
@@ -413,7 +412,7 @@
         </div>
     </div>
 
-    <!-- MAIN SCRIPT ENGINE -->
+    <!-- MAIN ENGINE SCRIPT -->
     <script>
         class AudioEngine {
             constructor() {
@@ -630,6 +629,13 @@
         let currentRotX = [0, 0, 0, 0];
         let currentRotY = [0, 0, 0, 0];
 
+        let peer = null;
+        let roomConnections = [];
+        let hostConnection = null;
+        let isHost = false;
+        let myRoomCode = '';
+        let onlinePlayerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+
         let tokens = [
             [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
             [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
@@ -845,7 +851,7 @@
                         cy += Math.sin(angle) * offsetRadius;
                     }
 
-                    const isSelectable = (item.pIdx === activePlayerIdx && diceRolled && movableTokenIds.includes(item.tId));
+                    const isSelectable = (item.pIdx === activePlayerIdx && diceRolled && movableTokenIds.includes(item.tId) && (gameMode !== 'online' || activePlayerIdx === humanPlayerIdx));
                     drawSingleToken(cx, cy, cellSize * 0.38, PLAYER_COLORS[item.pIdx], isSelectable);
                 });
             }
@@ -906,11 +912,16 @@
             if (isMoving || diceRolled) return;
             if (playerIdx !== activePlayerIdx) return;
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
+            if (gameMode === 'online' && activePlayerIdx !== humanPlayerIdx) return;
+
+            if (gameMode === 'online') {
+                broadcastNetworkMsg({ type: 'DICE_CLICK', playerIdx });
+            }
 
             rollDice(playerIdx);
         };
 
-        function rollDice(playerIdx) {
+        function rollDice(playerIdx, presetValue = null) {
             audioEngine.init();
             audioEngine.playDiceRoll();
 
@@ -918,7 +929,7 @@
             document.querySelectorAll('button[id^="rollBtn-"]').forEach(btn => btn.disabled = true);
 
             const cube = document.getElementById(`diceCube-${playerIdx}`);
-            diceValue = Math.floor(Math.random() * 6) + 1;
+            diceValue = presetValue || (Math.floor(Math.random() * 6) + 1);
 
             const faceRotations = {
                 1: { x: 0, y: 0 },
@@ -1005,6 +1016,7 @@
         canvas.addEventListener('click', (e) => {
             if (!diceRolled || isMoving) return;
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
+            if (gameMode === 'online' && activePlayerIdx !== humanPlayerIdx) return;
 
             const rect = canvas.getBoundingClientRect();
             const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -1019,6 +1031,9 @@
 
                 const dist = Math.hypot(clickX - tokenCx, clickY - tokenCy);
                 if (dist < cellSize * 0.6) {
+                    if (gameMode === 'online') {
+                        broadcastNetworkMsg({ type: 'MOVE_TOKEN', playerIdx: activePlayerIdx, tokenId: tId });
+                    }
                     moveToken(activePlayerIdx, tId);
                 }
             });
@@ -1138,7 +1153,6 @@
                 const targetPos = (token.pos === -1) ? 0 : token.pos + diceValue;
 
                 if (targetPos === 56) score += 1000;
-
                 if (token.pos === -1 && diceValue === 6) score += 500;
 
                 const targetCoords = getTokenBoardCoords(activePlayerIdx, targetPos, token.id);
@@ -1175,15 +1189,26 @@
                 const card = document.getElementById(`playerCard-${idx}`);
                 const status = document.getElementById(`pStatus-${idx}`);
                 const rollBtn = document.getElementById(`rollBtn-${idx}`);
+                const nameElem = document.getElementById(`pName-${idx}`);
+
+                if (nameElem && gameMode === 'online') {
+                    nameElem.childNodes[0].nodeValue = onlinePlayerNames[idx] + ' ';
+                }
 
                 if (activePlayersList.includes(idx)) {
                     card.style.display = 'flex';
                     if (idx === activePlayerIdx) {
                         card.classList.add('active-turn-card');
                         if (status) {
-                            status.innerText = (gameMode === 'vs_ai' && idx !== humanPlayerIdx) ? 'Bot Thinking...' : 'Your Turn (Roll)';
+                            if (gameMode === 'vs_ai' && idx !== humanPlayerIdx) {
+                                status.innerText = 'Bot Thinking...';
+                            } else if (gameMode === 'online' && idx !== humanPlayerIdx) {
+                                status.innerText = "Opponent's Turn";
+                            } else {
+                                status.innerText = 'Your Turn (Roll)';
+                            }
                         }
-                        if (rollBtn) rollBtn.disabled = diceRolled;
+                        if (rollBtn) rollBtn.disabled = (diceRolled || (gameMode === 'online' && idx !== humanPlayerIdx));
                     } else {
                         card.classList.remove('active-turn-card');
                         if (status) status.innerText = 'Wait';
@@ -1219,6 +1244,160 @@
                 if (div.parentNode) div.parentNode.removeChild(div);
             }, 2200);
         }
+
+        /* --- ONLINE MULTIPLAYER (PEERJS WEBRTC) --- */
+        window.switchOnlineTab = function(tab) {
+            const createPanel = document.getElementById('createRoomPanel');
+            const joinPanel = document.getElementById('joinRoomPanel');
+            const tabCreate = document.getElementById('tabCreateRoom');
+            const tabJoin = document.getElementById('tabJoinRoom');
+
+            if (tab === 'create') {
+                createPanel.classList.remove('hidden');
+                joinPanel.classList.add('hidden');
+                tabCreate.className = 'py-1.5 text-xs font-bold rounded-lg bg-yellow-500 text-black border border-yellow-200';
+                tabJoin.className = 'py-1.5 text-xs font-bold rounded-lg bg-stone-800 text-amber-200 border border-stone-600';
+            } else {
+                createPanel.classList.add('hidden');
+                joinPanel.classList.remove('hidden');
+                tabJoin.className = 'py-1.5 text-xs font-bold rounded-lg bg-yellow-500 text-black border border-yellow-200';
+                tabCreate.className = 'py-1.5 text-xs font-bold rounded-lg bg-stone-800 text-amber-200 border border-stone-600';
+            }
+        };
+
+        window.createOnlineRoom = function() {
+            const name = document.getElementById('playerNameInput').value.trim() || 'King Player';
+            myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
+            isHost = true;
+            humanPlayerIdx = 0;
+            onlinePlayerNames[0] = name;
+
+            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer network...';
+            document.getElementById('roomLobbyPanel').classList.remove('hidden');
+
+            peer = new Peer(`royal-ludo-${myRoomCode}`);
+
+            peer.on('open', (id) => {
+                document.getElementById('displayRoomCode').innerText = myRoomCode;
+                document.getElementById('lobbyStatusMsg').innerText = 'Room Created! Share code with friends.';
+                updateLobbyUI();
+            });
+
+            peer.on('connection', (conn) => {
+                roomConnections.push(conn);
+
+                conn.on('data', (data) => {
+                    handleNetworkData(data, conn);
+                });
+
+                conn.on('close', () => {
+                    roomConnections = roomConnections.filter(c => c !== conn);
+                    updateLobbyUI();
+                });
+            });
+
+            peer.on('error', (err) => {
+                alert('Connection Error: ' + err.type + '. Retrying...');
+                document.getElementById('lobbyStatusMsg').innerText = 'Error creating room. Try again.';
+            });
+        };
+
+        window.joinOnlineRoom = function() {
+            const name = document.getElementById('joinPlayerNameInput').value.trim() || 'Friend Player';
+            const code = document.getElementById('roomCodeInput').value.trim();
+
+            if (!code || code.length < 4) {
+                alert('Please enter a valid 5-digit room code.');
+                return;
+            }
+
+            myRoomCode = code;
+            isHost = false;
+
+            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to Room Host...';
+            document.getElementById('roomLobbyPanel').classList.remove('hidden');
+
+            peer = new Peer();
+
+            peer.on('open', () => {
+                hostConnection = peer.connect(`royal-ludo-${code}`);
+
+                hostConnection.on('open', () => {
+                    document.getElementById('displayRoomCode').innerText = code;
+                    document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host to start...';
+                    hostConnection.send({ type: 'JOIN', name });
+                });
+
+                hostConnection.on('data', (data) => {
+                    handleNetworkData(data, hostConnection);
+                });
+
+                hostConnection.on('error', (err) => {
+                    alert('Could not connect to room host.');
+                });
+            });
+
+            peer.on('error', (err) => {
+                alert('Failed to connect to network: ' + err.type);
+            });
+        };
+
+        function updateLobbyUI() {
+            const listElem = document.getElementById('connectedPlayersList');
+            if (!listElem) return;
+            listElem.innerHTML = '';
+
+            onlinePlayerNames.forEach((n, idx) => {
+                if (idx < activePlayersList.length) {
+                    const d = document.createElement('div');
+                    d.className = 'text-yellow-300 flex items-center justify-between bg-black/40 px-2 py-1 rounded';
+                    d.innerHTML = `<span>${PLAYER_COLORS[idx].name}: ${n}</span> <span class="text-[10px] text-green-400">● READY</span>`;
+                    listElem.appendChild(d);
+                }
+            });
+        }
+
+        function broadcastNetworkMsg(msg) {
+            if (isHost) {
+                roomConnections.forEach(c => {
+                    if (c && c.open) c.send(msg);
+                });
+            } else if (hostConnection && hostConnection.open) {
+                hostConnection.send(msg);
+            }
+        }
+
+        function handleNetworkData(data, conn) {
+            if (data.type === 'JOIN' && isHost) {
+                const assignedIdx = roomConnections.length;
+                onlinePlayerNames[assignedIdx] = data.name;
+                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames });
+                updateLobbyUI();
+                broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames });
+            } else if (data.type === 'WELCOME') {
+                humanPlayerIdx = data.playerIdx;
+                onlinePlayerNames = data.names;
+                updateLobbyUI();
+            } else if (data.type === 'UPDATE_NAMES') {
+                onlinePlayerNames = data.names;
+                updateLobbyUI();
+            } else if (data.type === 'START_GAME') {
+                gameMode = 'online';
+                onlinePlayerNames = data.names;
+                document.getElementById('setupModal').classList.add('hidden');
+                startGame();
+            } else if (data.type === 'DICE_CLICK') {
+                rollDice(data.playerIdx);
+            } else if (data.type === 'MOVE_TOKEN') {
+                moveToken(data.playerIdx, data.tokenId);
+            }
+        }
+
+        window.copyRoomCode = function() {
+            if (!myRoomCode) return;
+            navigator.clipboard.writeText(myRoomCode);
+            alert(`Room Code ${myRoomCode} copied to clipboard!`);
+        };
 
         window.selectGameMode = function(mode) {
             gameMode = mode;
@@ -1289,6 +1468,10 @@
         }
 
         window.startGame = function() {
+            if (gameMode === 'online' && isHost) {
+                broadcastNetworkMsg({ type: 'START_GAME', names: onlinePlayerNames });
+            }
+
             tokens = [
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
@@ -1328,7 +1511,7 @@
         };
 
         function triggerVictory(winnerIdx) {
-            const name = PLAYER_COLORS[winnerIdx].name;
+            const name = (gameMode === 'online') ? onlinePlayerNames[winnerIdx] : PLAYER_COLORS[winnerIdx].name;
             document.getElementById('winnerText').innerText = `${name} Wins!`;
             document.getElementById('victoryModal').classList.remove('hidden');
             audioEngine.playVictory();
