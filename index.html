@@ -914,11 +914,13 @@
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
             if (gameMode === 'online' && activePlayerIdx !== humanPlayerIdx) return;
 
+            const rollVal = Math.floor(Math.random() * 6) + 1;
+
             if (gameMode === 'online') {
-                broadcastNetworkMsg({ type: 'DICE_CLICK', playerIdx });
+                broadcastNetworkMsg({ type: 'DICE_CLICK', playerIdx, diceValue: rollVal });
             }
 
-            rollDice(playerIdx);
+            rollDice(playerIdx, rollVal);
         };
 
         function rollDice(playerIdx, presetValue = null) {
@@ -988,6 +990,9 @@
                 }, 1000);
             } else if (movableTokenIds.length === 1 && (gameMode === 'pass_play' || activePlayerIdx === humanPlayerIdx)) {
                 setTimeout(() => {
+                    if (gameMode === 'online') {
+                        broadcastNetworkMsg({ type: 'MOVE_TOKEN', playerIdx: activePlayerIdx, tokenId: movableTokenIds[0] });
+                    }
                     moveToken(activePlayerIdx, movableTokenIds[0]);
                 }, 350);
             } else if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
@@ -1357,10 +1362,12 @@
             });
         }
 
-        function broadcastNetworkMsg(msg) {
+        function broadcastNetworkMsg(msg, senderConn = null) {
             if (isHost) {
                 roomConnections.forEach(c => {
-                    if (c && c.open) c.send(msg);
+                    if (c && c.open && c !== senderConn) {
+                        c.send(msg);
+                    }
                 });
             } else if (hostConnection && hostConnection.open) {
                 hostConnection.send(msg);
@@ -1387,8 +1394,14 @@
                 document.getElementById('setupModal').classList.add('hidden');
                 startGame();
             } else if (data.type === 'DICE_CLICK') {
-                rollDice(data.playerIdx);
+                if (isHost) {
+                    broadcastNetworkMsg(data, conn);
+                }
+                rollDice(data.playerIdx, data.diceValue);
             } else if (data.type === 'MOVE_TOKEN') {
+                if (isHost) {
+                    broadcastNetworkMsg(data, conn);
+                }
                 moveToken(data.playerIdx, data.tokenId);
             }
         }
