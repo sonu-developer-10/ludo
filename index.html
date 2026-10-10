@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Royal Ludo King</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Yatra+One&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at center, #2c1605 0%, #0d0501 100%);
+            color: #f3e5ab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+
+        .font-desi {
+            font-family: 'Yatra One', cursive;
+        }
+
+        .font-heading {
+            font-family: 'Teko', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        /* Gold metallic text effect */
+        .gold-text {
+            background: linear-gradient(135deg, #ffe066 0%, #f5af19 50%, #e65c00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .board-frame {
+            background: linear-gradient(145deg, #5c2c10, #2e1203);
+            border: 12px solid #d4af37;
+            border-image: linear-gradient(to bottom right, #ffe57f, #aa7c11, #fff3b0, #7a5006) 1;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        /* Dice 3D Cube CSS for Corner Cards */
+        .scene {
+            width: 46px;
+            height: 46px;
+            perspective: 250px;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .cube-face {
+            position: absolute;
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border: 1.5px solid #b8860b;
+            border-radius: 8px;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.25);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 4px;
+            box-sizing: border-box;
+        }
+
+        .dot {
+            display: block;
+            width: 8px;
+            height: 8px;
+            background: #222;
+            border-radius: 50%;
+            margin: auto;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Dot placements for each face */
+        .face-1 .dot { grid-area: 2 / 2; background: #d32f2f; width: 10px; height: 10px; }
+
+        .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
+
+        .face-3 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
+        .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
+
+        .face-4 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-4 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-4 .dot:nth-child(3) { grid-area: 3 / 1; }
+        .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
+
+        .face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
+        .face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
+        .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
+
+        .face-6 .dot:nth-child(1) { grid-area: 1 / 1; }
+        .face-6 .dot:nth-child(2) { grid-area: 1 / 3; }
+        .face-6 .dot:nth-child(3) { grid-area: 2 / 1; }
+        .face-6 .dot:nth-child(4) { grid-area: 2 / 3; }
+        .face-6 .dot:nth-child(5) { grid-area: 3 / 1; }
+        .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
+
+        .face-1 { transform: rotateY(0deg) translateZ(23px); }
+        .face-2 { transform: rotateY(180deg) translateZ(23px); }
+        .face-3 { transform: rotateY(-90deg) translateZ(23px); }
+        .face-4 { transform: rotateY(90deg) translateZ(23px); }
+        .face-5 { transform: rotateX(90deg) translateZ(23px); }
+        .face-6 { transform: rotateX(-90deg) translateZ(23px); }
+
+        .modal-bg {
+            background-color: rgba(10, 5, 2, 0.85);
+            backdrop-filter: blur(5px);
+        }
+
+        @keyframes toastSlide {
+            0% { transform: translateY(-50px) scale(0.8); opacity: 0; }
+            20% { transform: translateY(0) scale(1.1); opacity: 1; }
+            30% { transform: translateY(0) scale(1); opacity: 1; }
+            80% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-30px) scale(0.9); opacity: 0; }
+        }
+
+        .toast-banner {
+            animation: toastSlide 2.2s ease-in-out forwards;
+        }
+
+        #gameCanvas {
+            border-radius: 4px;
+            touch-action: none;
+        }
+
+        .active-turn-card {
+            opacity: 1 !important;
+            box-shadow: 0 0 15px #ffd700, inset 0 0 10px rgba(255,215,0,0.3) !important;
+            border-color: #ffe066 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4">
+
+    <header class="w-full max-w-2xl flex items-center justify-between py-2 px-4 bg-yellow-950/60 border border-yellow-600/40 rounded-xl mb-2 shadow-lg backdrop-blur-md">
+        <div class="flex items-center space-x-2">
+            <span class="text-3xl">👑</span>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-heading font-bold gold-text leading-none tracking-wider uppercase">Royal Ludo</h1>
+                <p class="text-[10px] md:text-xs text-yellow-200/70 font-semibold tracking-wider uppercase">Classic Royal Edition</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" onclick="window.toggleSound()" class="p-2 bg-amber-900/80 hover:bg-amber-800 border border-yellow-500/50 rounded-lg text-lg transition transform active:scale-95" title="Mute/Unmute Audio">
+                🔊
+            </button>
+            <button id="speedToggleBtn" onclick="window.toggleSpeed()" class="px-2.5 py-1 bg-amber-900/80 hover:bg-amber-800 border border-yellow-500/50 rounded-lg text-xs font-bold transition transform active:scale-95 text-yellow-300" title="Animation Speed">
+                ⚡ 1x
+            </button>
+            <button onclick="window.openRestartModal()" class="px-3 py-1 bg-red-900/80 hover:bg-red-800 border border-red-500/50 rounded-lg text-xs md:text-sm font-bold text-red-200 transition transform active:scale-95">
+                Restart
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-2xl flex flex-col items-center justify-center relative my-auto">
+        
+        <!-- TOP PLAYER CARDS (RED Left, GREEN Right) -->
+        <div class="w-full max-w-[500px] flex items-center justify-between gap-2 mb-2">
+            <!-- PLAYER 0 (RED - Top Left) -->
+            <div id="playerCard-0" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-red-600/50 shadow-lg transition-all duration-300 opacity-45">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-red-600 text-white">🔴</div>
+                    <div class="leading-tight">
+                        <div class="font-bold text-xs md:text-sm text-red-400 flex items-center gap-1">
+                            Red <span id="score-0" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
+                        </div>
+                        <div id="pStatus-0" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                    <div class="scene" onclick="window.handleDiceClick(0)">
+                        <div class="cube" id="diceCube-0" style="transform: translateZ(-23px) rotateX(0deg) rotateY(0deg);">
+                            <div class="cube-face face-1"><span class="dot"></span></div>
+                            <div class="cube-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                        </div>
+                    </div>
+                    <button id="rollBtn-0" onclick="window.handleDiceClick(0)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                        <span>🎲 ROLL</span>
+                        <span id="diceValBadge-0" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PLAYER 1 (GREEN - Top Right) -->
+            <div id="playerCard-1" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-green-600/50 shadow-lg transition-all duration-300 opacity-45">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-green-600 text-white">🟢</div>
+                    <div class="leading-tight">
+                        <div class="font-bold text-xs md:text-sm text-green-400 flex items-center gap-1">
+                            Green <span id="score-1" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
+                        </div>
+                        <div id="pStatus-1" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                    <div class="scene" onclick="window.handleDiceClick(1)">
+                        <div class="cube" id="diceCube-1" style="transform: translateZ(-23px) rotateX(0deg) rotateY(0deg);">
+                            <div class="cube-face face-1"><span class="dot"></span></div>
+                            <div class="cube-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                        </div>
+                    </div>
+                    <button id="rollBtn-1" onclick="window.handleDiceClick(1)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                        <span>🎲 ROLL</span>
+                        <span id="diceValBadge-1" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="board-frame p-2 md:p-3 rounded-2xl w-full max-w-[500px] aspect-square flex items-center justify-center relative shadow-2xl">
+            <canvas id="gameCanvas" width="600" height="600" class="w-full h-full cursor-pointer"></canvas>
+            
+            <div id="toastContainer" class="absolute inset-0 pointer-events-none flex items-center justify-center z-20"></div>
+        </div>
+
+        <!-- BOTTOM PLAYER CARDS (BLUE Left, YELLOW Right) -->
+        <div class="w-full max-w-[500px] flex items-center justify-between gap-2 mt-2">
+            <!-- PLAYER 3 (BLUE - Bottom Left) -->
+            <div id="playerCard-3" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-blue-600/50 shadow-lg transition-all duration-300 opacity-45">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-blue-600 text-white">🔵</div>
+                    <div class="leading-tight">
+                        <div class="font-bold text-xs md:text-sm text-blue-400 flex items-center gap-1">
+                            Blue <span id="score-3" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
+                        </div>
+                        <div id="pStatus-3" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                    <div class="scene" onclick="window.handleDiceClick(3)">
+                        <div class="cube" id="diceCube-3" style="transform: translateZ(-23px) rotateX(0deg) rotateY(0deg);">
+                            <div class="cube-face face-1"><span class="dot"></span></div>
+                            <div class="cube-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                        </div>
+                    </div>
+                    <button id="rollBtn-3" onclick="window.handleDiceClick(3)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                        <span>🎲 ROLL</span>
+                        <span id="diceValBadge-3" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- PLAYER 2 (YELLOW - Bottom Right) -->
+            <div id="playerCard-2" class="player-card flex-1 flex items-center justify-between p-2 rounded-xl bg-yellow-950/80 border-2 border-yellow-600/50 shadow-lg transition-all duration-300 opacity-45">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-white shadow flex items-center justify-center font-bold text-sm bg-yellow-500 text-white">🟡</div>
+                    <div class="leading-tight">
+                        <div class="font-bold text-xs md:text-sm text-yellow-400 flex items-center gap-1">
+                            Yellow <span id="score-2" class="text-[10px] bg-black/60 px-1 py-0.5 rounded text-yellow-300 font-normal">0/4</span>
+                        </div>
+                        <div id="pStatus-2" class="text-[10px] text-yellow-200/70 font-medium">Wait</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1.5">
+                    <div class="scene" onclick="window.handleDiceClick(2)">
+                        <div class="cube" id="diceCube-2" style="transform: translateZ(-23px) rotateX(0deg) rotateY(0deg);">
+                            <div class="cube-face face-1"><span class="dot"></span></div>
+                            <div class="cube-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-4"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-5"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                        </div>
+                    </div>
+                    <button id="rollBtn-2" onclick="window.handleDiceClick(2)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                        <span>🎲 ROLL</span>
+                        <span id="diceValBadge-2" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="setupModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50">
+        <div class="bg-gradient-to-b from-yellow-950 to-stone-900 border-4 border-yellow-500/80 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative">
+            <div class="text-5xl mb-2">👑</div>
+            <h2 class="text-3xl font-heading font-bold gold-text uppercase tracking-wider mb-1">Royal Ludo</h2>
+            <p class="text-xs text-amber-200/70 mb-5">Select game mode and player count to start the match</p>
+
+            <!-- Mode Selector -->
+            <div class="mb-4 text-left">
+                <label class="block text-xs text-amber-300 font-bold uppercase mb-1">Game Mode</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" id="modePassPlayBtn" onclick="window.selectGameMode('pass_play')" class="py-2 px-2 rounded-xl border-2 font-bold text-xs bg-amber-600 border-yellow-300 text-white shadow-md">
+                        👥 Pass & Play
+                    </button>
+                    <button type="button" id="modeVsAiBtn" onclick="window.selectGameMode('vs_ai')" class="py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900">
+                        🤖 VS AI Bot
+                    </button>
+                    <button type="button" id="modeOnlineBtn" onclick="window.selectGameMode('online')" class="py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900">
+                        🌐 Online Room
+                    </button>
+                </div>
+            </div>
+
+            <!-- ONLINE ROOM CONTROLS -->
+            <div id="onlineControlsSection" class="mb-4 text-left hidden bg-amber-950/80 p-3 rounded-xl border border-yellow-600/40">
+                <div id="onlineTabButtons" class="grid grid-cols-2 gap-2 mb-3">
+                    <button type="button" id="tabCreateRoom" onclick="window.switchOnlineTab('create')" class="py-1.5 text-xs font-bold rounded-lg bg-yellow-500 text-black border border-yellow-200">Create Room</button>
+                    <button type="button" id="tabJoinRoom" onclick="window.switchOnlineTab('join')" class="py-1.5 text-xs font-bold rounded-lg bg-stone-800 text-amber-200 border border-stone-600">Join Room</button>
+                </div>
+
+                <!-- Create Room Sub-Panel -->
+                <div id="createRoomPanel">
+                    <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
+                    <input type="text" id="playerNameInput" value="King Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 focus:outline-none focus:border-yellow-400">
+                    <button type="button" onclick="window.createOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
+                        ➕ CREATE ROOM CODE
+                    </button>
+                </div>
+
+                <!-- Join Room Sub-Panel -->
+                <div id="joinRoomPanel" class="hidden">
+                    <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
+                    <input type="text" id="joinPlayerNameInput" value="Friend Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-2 focus:outline-none focus:border-yellow-400">
+                    <label class="block text-[11px] text-amber-300 font-semibold mb-1">Enter 5-Digit Room Code</label>
+                    <input type="text" id="roomCodeInput" placeholder="e.g. LUDO-1234" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 uppercase tracking-wider focus:outline-none focus:border-yellow-400">
+                    <button type="button" onclick="window.joinOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
+                        🔗 JOIN ROOM MATCH
+                    </button>
+                </div>
+
+                <div id="roomLobbyPanel" class="hidden text-center mt-2 pt-2 border-t border-amber-800/60">
+                    <div class="text-xs text-amber-300 font-bold mb-1">ROOM CODE:</div>
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <span id="displayRoomCode" class="text-xl font-mono font-extrabold text-yellow-300 bg-black/60 px-3 py-1 rounded-lg border border-yellow-500">----</span>
+                        <button type="button" onclick="window.copyRoomCode()" class="px-2 py-1 bg-amber-700 hover:bg-amber-600 text-xs font-bold rounded text-white shadow">📋 Copy</button>
+                    </div>
+                    <p id="lobbyStatusMsg" class="text-[10px] text-amber-200/80 mb-2">Waiting for friends to join...</p>
+                    <div id="connectedPlayersList" class="flex flex-col gap-1 mb-3 text-xs text-left"></div>
+                </div>
+            </div>
+
+            <!-- Player Count Selector -->
+            <div id="playerCountSection" class="mb-6 text-left">
+                <label class="block text-xs text-amber-300 font-bold uppercase mb-1">Number of Players</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="window.selectPlayerCount(2)" id="pCountBtn-2" class="pCountBtn py-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-amber-200">2 Players</button>
+                    <button type="button" onclick="window.selectPlayerCount(3)" id="pCountBtn-3" class="pCountBtn py-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-amber-200">3 Players</button>
+                    <button type="button" onclick="window.selectPlayerCount(4)" id="pCountBtn-4" class="pCountBtn py-2 rounded-xl border-2 border-yellow-300 bg-amber-600 font-bold text-white shadow-md">4 Players</button>
+                </div>
+            </div>
+
+            <!-- Color Picker Section -->
+            <div id="colorPickerSection" class="mb-6 text-left">
+                <label id="colorSelectLabel" class="block text-xs text-amber-300 font-bold uppercase mb-1">Your Color</label>
+                <div id="colorPickerContainer" class="grid grid-cols-4 gap-2"></div>
+            </div>
+
+            <!-- Start Match Button -->
+            <button id="startGameModalBtn" onclick="window.startGame()" class="w-full py-3.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-extrabold text-xl rounded-xl shadow-xl hover:brightness-110 active:scale-95 transition">
+                🚀 START MATCH
+            </button>
+        </div>
+    </div>
+
+    <!-- RESTART CONFIRMATION MODAL -->
+    <div id="restartModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gradient-to-b from-yellow-950 to-stone-900 border-2 border-yellow-500/80 rounded-2xl max-w-sm w-full p-5 text-center shadow-2xl">
+            <h3 class="text-2xl font-heading font-bold gold-text uppercase mb-2">Restart Match?</h3>
+            <p class="text-xs text-amber-200/80 mb-5">Current game progress will be lost. Return to menu?</p>
+            <div class="flex gap-3">
+                <button onclick="window.closeRestartModal()" class="flex-1 py-2 bg-stone-800 hover:bg-stone-700 border border-stone-600 text-stone-300 font-bold rounded-xl text-sm">Cancel</button>
+                <button onclick="window.confirmRestart()" class="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl text-sm shadow-md">Yes, Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="victoryModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gradient-to-b from-yellow-900 via-amber-950 to-black border-4 border-yellow-400 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl relative overflow-hidden">
+            <div class="text-6xl mb-3 animate-bounce">👑</div>
+            <h2 class="text-4xl font-heading font-bold gold-text uppercase tracking-wider mb-1">VICTORY!</h2>
+            <h3 id="winnerText" class="text-2xl font-heading text-yellow-300 mb-4">Player Wins!</h3>
+            <p class="text-xs text-amber-200/80 mb-6">Congratulations on a magnificent victory!</p>
+            
+            <button onclick="window.confirmRestart()" class="w-full py-3.5 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-black font-extrabold text-lg rounded-xl shadow-xl hover:brightness-110 transition active:scale-95">
+                🏆 PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN SCRIPT ENGINE -->
+    <script>
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playDiceRoll() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                for (let i = 0; i < 6; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120 + Math.random() * 200, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.08, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.04);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05);
+                    osc.stop(now + i * 0.05 + 0.04);
+                }
+            }
+
+            playTokenStep() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(540, now + 0.08);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playSafeZone() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                [400, 520, 650].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.12);
+                });
+            }
+
+            playCapture() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playChakkaSix() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.15);
+                });
+            }
+
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [400, 500, 600, 800, 1000];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.25);
+                });
+            }
+        }
+
+        const audioEngine = new AudioEngine();
+
+        window.toggleSound = function() {
+            audioEngine.muted = !audioEngine.muted;
+            document.getElementById('soundToggleBtn').innerText = audioEngine.muted ? '🔇' : '🔊';
+        };
+
+        window.toggleSpeed = function() {
+            animSpeedMultiplier = (animSpeedMultiplier === 1) ? 2 : 1;
+            const btn = document.getElementById('speedToggleBtn');
+            if (btn) btn.innerText = `⚡ ${animSpeedMultiplier}x`;
+        };
+
+        const PLAYER_COLORS = [
+            { id: 0, name: 'Red', code: '#d32f2f', lightCode: '#ff6659', darkCode: '#9a0007', bgClass: 'bg-red-600' },
+            { id: 1, name: 'Green', code: '#388e3c', lightCode: '#6abf69', darkCode: '#00600f', bgClass: 'bg-green-600' },
+            { id: 2, name: 'Yellow', code: '#fbc02d', lightCode: '#fff263', darkCode: '#c49000', bgClass: 'bg-yellow-500' },
+            { id: 3, name: 'Blue', code: '#1976d2', lightCode: '#63a4ff', darkCode: '#004ba0', bgClass: 'bg-blue-600' }
+        ];
+
+        const SAFE_ZONES = [
+            { r: 6, c: 1 }, { r: 2, c: 6 },
+            { r: 1, c: 8 }, { r: 6, c: 12 },
+            { r: 8, c: 13 }, { r: 12, c: 8 },
+            { r: 13, c: 6 }, { r: 8, c: 2 }
+        ];
+
+        const YARD_POSITIONS = [
+            [{ r: 2, c: 2 }, { r: 2, c: 3 }, { r: 3, c: 2 }, { r: 3, c: 3 }],
+            [{ r: 2, c: 11 }, { r: 2, c: 12 }, { r: 3, c: 11 }, { r: 3, c: 12 }],
+            [{ r: 11, c: 11 }, { r: 11, c: 12 }, { r: 12, c: 11 }, { r: 12, c: 12 }],
+            [{ r: 11, c: 2 }, { r: 11, c: 3 }, { r: 12, c: 2 }, { r: 12, c: 3 }]
+        ];
+
+        const PLAYER_PATHS = [
+            // Red Path
+            [
+                { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
+                { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
+                { r: 0, c: 7 }, { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
+                { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
+                { r: 7, c: 14 }, { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
+                { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
+                { r: 14, c: 7 }, { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
+                { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
+                { r: 7, c: 0 }, { r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 }, { r: 7, c: 7 }
+            ],
+            // Green Path
+            [
+                { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
+                { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
+                { r: 7, c: 14 }, { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
+                { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
+                { r: 14, c: 7 }, { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
+                { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
+                { r: 7, c: 0 }, { r: 6, c: 0 }, { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
+                { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
+                { r: 0, c: 7 }, { r: 1, c: 7 }, { r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }, { r: 7, c: 7 }
+            ],
+            // Yellow Path
+            [
+                { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
+                { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
+                { r: 14, c: 7 }, { r: 14, c: 6 }, { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
+                { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
+                { r: 7, c: 0 }, { r: 6, c: 0 }, { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
+                { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
+                { r: 0, c: 7 }, { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
+                { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
+                { r: 7, c: 14 }, { r: 7, c: 13 }, { r: 7, c: 12 }, { r: 7, c: 11 }, { r: 7, c: 10 }, { r: 7, c: 9 }, { r: 7, c: 7 }
+            ],
+            // Blue Path
+            [
+                { r: 13, c: 6 }, { r: 12, c: 6 }, { r: 11, c: 6 }, { r: 10, c: 6 }, { r: 9, c: 6 },
+                { r: 8, c: 5 }, { r: 8, c: 4 }, { r: 8, c: 3 }, { r: 8, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 0 },
+                { r: 7, c: 0 }, { r: 6, c: 0 }, { r: 6, c: 1 }, { r: 6, c: 2 }, { r: 6, c: 3 }, { r: 6, c: 4 }, { r: 6, c: 5 },
+                { r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 2, c: 6 }, { r: 1, c: 6 }, { r: 0, c: 6 },
+                { r: 0, c: 7 }, { r: 0, c: 8 }, { r: 1, c: 8 }, { r: 2, c: 8 }, { r: 3, c: 8 }, { r: 4, c: 8 }, { r: 5, c: 8 },
+                { r: 6, c: 9 }, { r: 6, c: 10 }, { r: 6, c: 11 }, { r: 6, c: 12 }, { r: 6, c: 13 }, { r: 6, c: 14 },
+                { r: 7, c: 14 }, { r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }, { r: 8, c: 10 }, { r: 8, c: 9 },
+                { r: 9, c: 8 }, { r: 10, c: 8 }, { r: 11, c: 8 }, { r: 12, c: 8 }, { r: 13, c: 8 }, { r: 14, c: 8 },
+                { r: 14, c: 7 }, { r: 13, c: 7 }, { r: 12, c: 7 }, { r: 11, c: 7 }, { r: 10, c: 7 }, { r: 9, c: 7 }, { r: 7, c: 7 }
+            ]
+        ];
+
+        let gameMode = 'pass_play';
+        let totalPlayers = 4;
+        let humanPlayerIdx = 0;
+        let activePlayerIdx = 0;
+        let diceValue = 0;
+        let diceRolled = false;
+        let isMoving = false;
+        let consecutiveSixes = 0;
+        let animSpeedMultiplier = 1;
+        let currentRotX = [0, 0, 0, 0];
+        let currentRotY = [0, 0, 0, 0];
+
+        let tokens = [
+            [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+            [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+            [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+            [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }]
+        ];
+
+        let activePlayersList = [0, 1, 2, 3];
+        let movableTokenIds = [];
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawBoard() {
+            const size = canvas.width;
+            const cellSize = size / 15;
+
+            ctx.clearRect(0, 0, size, size);
+
+            ctx.fillStyle = '#1c0a02';
+            ctx.fillRect(0, 0, size, size);
+
+            drawYardBase(0, 0, 6 * cellSize, 6 * cellSize, PLAYER_COLORS[0]);
+            drawYardBase(9 * cellSize, 0, 6 * cellSize, 6 * cellSize, PLAYER_COLORS[1]);
+            drawYardBase(9 * cellSize, 9 * cellSize, 6 * cellSize, 6 * cellSize, PLAYER_COLORS[2]);
+            drawYardBase(0, 9 * cellSize, 6 * cellSize, 6 * cellSize, PLAYER_COLORS[3]);
+
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    if ((r < 6 && c < 6) || (r < 6 && c > 8) || (r > 8 && c < 6) || (r > 8 && c > 8) || (r >= 6 && r <= 8 && c >= 6 && c <= 8)) {
+                        continue;
+                    }
+
+                    ctx.strokeStyle = '#b8860b';
+                    ctx.lineWidth = 1.5;
+                    ctx.fillStyle = '#fffdf0';
+                    ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+                    ctx.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize);
+                }
+            }
+
+            for (let c = 1; c <= 5; c++) drawColoredCell(7, c, PLAYER_COLORS[0].code);
+            drawColoredCell(6, 1, PLAYER_COLORS[0].code);
+
+            for (let r = 1; r <= 5; r++) drawColoredCell(r, 7, PLAYER_COLORS[1].code);
+            drawColoredCell(1, 8, PLAYER_COLORS[1].code);
+
+            for (let c = 9; c <= 13; c++) drawColoredCell(7, c, PLAYER_COLORS[2].code);
+            drawColoredCell(8, 13, PLAYER_COLORS[2].code);
+
+            for (let r = 9; r <= 13; r++) drawColoredCell(r, 7, PLAYER_COLORS[3].code);
+            drawColoredCell(13, 6, PLAYER_COLORS[3].code);
+
+            SAFE_ZONES.forEach(sz => {
+                drawStarIcon(sz.c * cellSize + cellSize / 2, sz.r * cellSize + cellSize / 2, cellSize * 0.35, '#d4af37');
+            });
+
+            drawCenterHome(cellSize);
+
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(0, 0, size, size);
+
+            drawAllTokens(cellSize);
+        }
+
+        function drawYardBase(x, y, w, h, colorObj) {
+            ctx.fillStyle = colorObj.code;
+            ctx.fillRect(x, y, w, h);
+
+            ctx.fillStyle = '#fffdf0';
+            ctx.fillRect(x + w * 0.15, y + h * 0.15, w * 0.7, h * 0.7);
+
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x + w * 0.15, y + h * 0.15, w * 0.7, h * 0.7);
+
+            const radius = w * 0.11;
+            const offsetL = w * 0.35;
+            const offsetR = w * 0.65;
+
+            [
+                { cx: x + offsetL, cy: y + offsetL },
+                { cx: x + offsetR, cy: y + offsetL },
+                { cx: x + offsetL, cy: y + offsetR },
+                { cx: x + offsetR, cy: y + offsetR }
+            ].forEach(pt => {
+                ctx.beginPath();
+                ctx.arc(pt.cx, pt.cy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0,0,0,0.12)';
+                ctx.fill();
+                ctx.strokeStyle = '#b8860b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function drawColoredCell(r, c, colorCode) {
+            const cellSize = canvas.width / 15;
+            ctx.fillStyle = colorCode;
+            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+            ctx.strokeStyle = '#b8860b';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        }
+
+        function drawStarIcon(cx, cy, spikes, color) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 4;
+            const outerRadius = spikes;
+            const innerRadius = spikes / 2;
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            const step = Math.PI / 5;
+
+            ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < 5; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawCenterHome(cellSize) {
+            const cx = 7.5 * cellSize;
+            const cy = 7.5 * cellSize;
+
+            ctx.fillStyle = PLAYER_COLORS[0].code;
+            ctx.beginPath();
+            ctx.moveTo(6 * cellSize, 6 * cellSize);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(6 * cellSize, 9 * cellSize);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = PLAYER_COLORS[1].code;
+            ctx.beginPath();
+            ctx.moveTo(6 * cellSize, 6 * cellSize);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(9 * cellSize, 6 * cellSize);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = PLAYER_COLORS[2].code;
+            ctx.beginPath();
+            ctx.moveTo(9 * cellSize, 6 * cellSize);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(9 * cellSize, 9 * cellSize);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = PLAYER_COLORS[3].code;
+            ctx.beginPath();
+            ctx.moveTo(6 * cellSize, 9 * cellSize);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(9 * cellSize, 9 * cellSize);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, cellSize * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#fffdf0';
+            ctx.fill();
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.font = `${cellSize * 0.6}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('👑', cx, cy);
+        }
+
+        function drawAllTokens(cellSize) {
+            const map = {};
+
+            activePlayersList.forEach(pIdx => {
+                tokens[pIdx].forEach(t => {
+                    const coords = getTokenBoardCoords(pIdx, t.pos, t.id);
+                    const key = `${coords.r}_${coords.c}`;
+                    if (!map[key]) map[key] = [];
+                    map[key].push({ pIdx, tId: t.id, pos: t.pos });
+                });
+            });
+
+            for (let key in map) {
+                const group = map[key];
+                const count = group.length;
+
+                group.forEach((item, index) => {
+                    const coords = getTokenBoardCoords(item.pIdx, item.pos, item.tId);
+                    let cx = coords.c * cellSize + cellSize / 2;
+                    let cy = coords.r * cellSize + cellSize / 2;
+
+                    if (count > 1) {
+                        const angle = (index / count) * Math.PI * 2;
+                        const offsetRadius = cellSize * 0.18;
+                        cx += Math.cos(angle) * offsetRadius;
+                        cy += Math.sin(angle) * offsetRadius;
+                    }
+
+                    const isSelectable = (item.pIdx === activePlayerIdx && diceRolled && movableTokenIds.includes(item.tId));
+                    drawSingleToken(cx, cy, cellSize * 0.38, PLAYER_COLORS[item.pIdx], isSelectable);
+                });
+            }
+        }
+
+        function drawSingleToken(cx, cy, radius, colorObj, isHighlight) {
+            ctx.save();
+
+            if (isHighlight) {
+                const pulse = Math.sin(Date.now() / 150) * 4;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius + 6 + pulse, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 235, 59, 0.6)';
+                ctx.fill();
+            }
+
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetY = 3;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = colorObj.code;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            const grad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.1, cx, cy, radius);
+            grad.addColorStop(0, colorObj.lightCode);
+            grad.addColorStop(0.7, colorObj.code);
+            grad.addColorStop(1, colorObj.darkCode);
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.7, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff3b0';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function getTokenBoardCoords(playerIdx, pos, tokenId = 0) {
+            if (pos === -1) {
+                return YARD_POSITIONS[playerIdx][tokenId];
+            }
+            if (pos >= 0 && pos <= 56) {
+                return PLAYER_PATHS[playerIdx][pos];
+            }
+            return { r: 7, c: 7 };
+        }
+
+        window.handleDiceClick = function(playerIdx) {
+            if (isMoving || diceRolled) return;
+            if (playerIdx !== activePlayerIdx) return;
+            if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
+
+            rollDice(playerIdx);
+        };
+
+        function rollDice(playerIdx) {
+            audioEngine.init();
+            audioEngine.playDiceRoll();
+
+            diceRolled = true;
+            document.querySelectorAll('button[id^="rollBtn-"]').forEach(btn => btn.disabled = true);
+
+            const cube = document.getElementById(`diceCube-${playerIdx}`);
+            diceValue = Math.floor(Math.random() * 6) + 1;
+
+            const faceRotations = {
+                1: { x: 0, y: 0 },
+                2: { x: 0, y: -180 },
+                3: { x: 0, y: 90 },
+                4: { x: 0, y: -90 },
+                5: { x: -90, y: 0 },
+                6: { x: 90, y: 0 }
+            };
+
+            const target = faceRotations[diceValue];
+            currentRotX[playerIdx] += 1440 + target.x - (currentRotX[playerIdx] % 360);
+            currentRotY[playerIdx] += 1440 + target.y - (currentRotY[playerIdx] % 360);
+
+            if (cube) {
+                cube.style.transition = 'transform 0.75s cubic-bezier(0.2, 0.8, 0.25, 1.15)';
+                cube.style.transform = `translateZ(-23px) rotateX(${currentRotX[playerIdx]}deg) rotateY(${currentRotY[playerIdx]}deg)`;
+            }
+
+            const badge = document.getElementById(`diceValBadge-${playerIdx}`);
+            if (badge) {
+                badge.innerText = diceValue;
+                badge.classList.remove('hidden');
+            }
+
+            setTimeout(() => {
+                processDiceRollOutcome();
+            }, 800);
+        }
+
+        function processDiceRollOutcome() {
+            if (diceValue === 6) {
+                consecutiveSixes++;
+                showToastBanner('Rolled a 6! 🎲', 'Extra Turn Awarded!');
+                audioEngine.playChakkaSix();
+
+                if (consecutiveSixes === 3) {
+                    showToastBanner('Three 6s Rolled! 🚫', 'Turn Forfeited');
+                    setTimeout(() => {
+                        resetDiceStreak();
+                        nextTurn();
+                    }, 1200);
+                    return;
+                }
+            } else {
+                resetDiceStreak();
+            }
+
+            movableTokenIds = getMovableTokens(activePlayerIdx, diceValue);
+            drawBoard();
+
+            if (movableTokenIds.length === 0) {
+                showToastBanner('No Valid Moves ❌', 'Passing Turn');
+                setTimeout(() => {
+                    nextTurn();
+                }, 1000);
+            } else if (movableTokenIds.length === 1 && (gameMode === 'pass_play' || activePlayerIdx === humanPlayerIdx)) {
+                setTimeout(() => {
+                    moveToken(activePlayerIdx, movableTokenIds[0]);
+                }, 350);
+            } else if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
+                setTimeout(() => {
+                    aiSelectAndMoveToken();
+                }, 600);
+            }
+        }
+
+        function resetDiceStreak() {
+            consecutiveSixes = 0;
+        }
+
+        function getMovableTokens(playerIdx, rollVal) {
+            const list = [];
+            tokens[playerIdx].forEach(t => {
+                if (t.pos === -1) {
+                    if (rollVal === 6) list.push(t.id);
+                } else if (t.pos + rollVal <= 56) {
+                    list.push(t.id);
+                }
+            });
+            return list;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (!diceRolled || isMoving) return;
+            if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const cellSize = canvas.width / 15;
+
+            movableTokenIds.forEach(tId => {
+                const token = tokens[activePlayerIdx][tId];
+                const coords = getTokenBoardCoords(activePlayerIdx, token.pos, token.id);
+                const tokenCx = coords.c * cellSize + cellSize / 2;
+                const tokenCy = coords.r * cellSize + cellSize / 2;
+
+                const dist = Math.hypot(clickX - tokenCx, clickY - tokenCy);
+                if (dist < cellSize * 0.6) {
+                    moveToken(activePlayerIdx, tId);
+                }
+            });
+        });
+
+        function moveToken(playerIdx, tokenId) {
+            if (isMoving) return;
+            isMoving = true;
+            movableTokenIds = [];
+
+            const token = tokens[playerIdx][tokenId];
+            const stepsToMove = (token.pos === -1 && diceValue === 6) ? 1 : diceValue;
+            let currentStep = 0;
+
+            const moveInterval = setInterval(() => {
+                if (token.pos === -1 && diceValue === 6) {
+                    token.pos = 0;
+                } else {
+                    token.pos += 1;
+                }
+
+                currentStep++;
+                audioEngine.playTokenStep();
+                drawBoard();
+
+                if (currentStep >= stepsToMove) {
+                    clearInterval(moveInterval);
+                    setTimeout(() => {
+                        handlePostMoveRules(playerIdx, token);
+                    }, 150);
+                }
+            }, 180 / animSpeedMultiplier);
+        }
+
+        function handlePostMoveRules(playerIdx, movedToken) {
+            let extraTurn = (diceValue === 6);
+
+            if (movedToken.pos === 56) {
+                audioEngine.playVictory();
+                showToastBanner('Token Home! 🏆', 'Extra Turn Awarded!');
+                extraTurn = true;
+                updateScoreboard();
+
+                if (tokens[playerIdx].every(t => t.pos === 56)) {
+                    triggerVictory(playerIdx);
+                    return;
+                }
+            } else if (movedToken.pos >= 0 && movedToken.pos <= 50) {
+                const landedCoords = getTokenBoardCoords(playerIdx, movedToken.pos, movedToken.id);
+                const isSafeCell = SAFE_ZONES.some(sz => sz.r === landedCoords.r && sz.c === landedCoords.c);
+
+                if (!isSafeCell) {
+                    activePlayersList.forEach(otherPIdx => {
+                        if (otherPIdx !== playerIdx) {
+                            tokens[otherPIdx].forEach(oppToken => {
+                                if (oppToken.pos >= 0 && oppToken.pos <= 50) {
+                                    const oppCoords = getTokenBoardCoords(otherPIdx, oppToken.pos, oppToken.id);
+                                    if (oppCoords.r === landedCoords.r && oppCoords.c === landedCoords.c) {
+                                        oppToken.pos = -1;
+                                        extraTurn = true;
+                                        audioEngine.playCapture();
+                                        showToastBanner('Token Captured! ⚔️', `${PLAYER_COLORS[otherPIdx].name}'s token captured!`);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    audioEngine.playSafeZone();
+                }
+            }
+
+            isMoving = false;
+            drawBoard();
+
+            if (extraTurn) {
+                diceRolled = false;
+                updateTurnUI();
+
+                if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
+                    setTimeout(() => { rollDice(activePlayerIdx); }, 800);
+                }
+            } else {
+                nextTurn();
+            }
+        }
+
+        function nextTurn() {
+            diceRolled = false;
+            isMoving = false;
+            resetDiceStreak();
+
+            const currentPos = activePlayersList.indexOf(activePlayerIdx);
+            const nextPos = (currentPos + 1) % activePlayersList.length;
+            activePlayerIdx = activePlayersList[nextPos];
+
+            updateTurnUI();
+            drawBoard();
+
+            if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
+                setTimeout(() => {
+                    rollDice(activePlayerIdx);
+                }, 800);
+            }
+        }
+
+        function aiSelectAndMoveToken() {
+            if (movableTokenIds.length === 0) return;
+
+            let bestTokenId = movableTokenIds[0];
+            let highestScore = -9999;
+
+            movableTokenIds.forEach(tId => {
+                const token = tokens[activePlayerIdx][tId];
+                let score = 0;
+
+                const targetPos = (token.pos === -1) ? 0 : token.pos + diceValue;
+
+                if (targetPos === 56) score += 1000;
+
+                if (token.pos === -1 && diceValue === 6) score += 500;
+
+                const targetCoords = getTokenBoardCoords(activePlayerIdx, targetPos, token.id);
+                const isSafe = SAFE_ZONES.some(sz => sz.r === targetCoords.r && sz.c === targetCoords.c);
+
+                if (!isSafe && targetPos <= 50) {
+                    activePlayersList.forEach(otherPIdx => {
+                        if (otherPIdx !== activePlayerIdx) {
+                            tokens[otherPIdx].forEach(oppToken => {
+                                if (oppToken.pos >= 0 && oppToken.pos <= 50) {
+                                    const oppCoords = getTokenBoardCoords(otherPIdx, oppToken.pos, oppToken.id);
+                                    if (oppCoords.r === targetCoords.r && oppCoords.c === targetCoords.c) {
+                                        score += 800;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+
+                score += targetPos * 2;
+
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestTokenId = tId;
+                }
+            });
+
+            moveToken(activePlayerIdx, bestTokenId);
+        }
+
+        function updateTurnUI() {
+            [0, 1, 2, 3].forEach(idx => {
+                const card = document.getElementById(`playerCard-${idx}`);
+                const status = document.getElementById(`pStatus-${idx}`);
+                const rollBtn = document.getElementById(`rollBtn-${idx}`);
+
+                if (activePlayersList.includes(idx)) {
+                    card.style.display = 'flex';
+                    if (idx === activePlayerIdx) {
+                        card.classList.add('active-turn-card');
+                        if (status) {
+                            status.innerText = (gameMode === 'vs_ai' && idx !== humanPlayerIdx) ? 'Bot Thinking...' : 'Your Turn (Roll)';
+                        }
+                        if (rollBtn) rollBtn.disabled = diceRolled;
+                    } else {
+                        card.classList.remove('active-turn-card');
+                        if (status) status.innerText = 'Wait';
+                        if (rollBtn) rollBtn.disabled = true;
+                    }
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function updateScoreboard() {
+            [0, 1, 2, 3].forEach(idx => {
+                const homeCount = tokens[idx].filter(t => t.pos === 56).length;
+                const scoreElem = document.getElementById(`score-${idx}`);
+                if (scoreElem) scoreElem.innerText = `${homeCount}/4`;
+            });
+        }
+
+        function showToastBanner(title, sub) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const div = document.createElement('div');
+            div.className = 'toast-banner bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 border-2 border-yellow-200 text-black p-3 px-6 rounded-2xl shadow-2xl text-center pointer-events-none';
+            div.innerHTML = `
+                <div class="font-heading font-extrabold text-xl leading-none uppercase">${title}</div>
+                <div class="text-xs font-bold text-amber-950">${sub}</div>
+            `;
+
+            container.appendChild(div);
+            setTimeout(() => {
+                if (div.parentNode) div.parentNode.removeChild(div);
+            }, 2200);
+        }
+
+        window.selectGameMode = function(mode) {
+            gameMode = mode;
+            document.getElementById('modePassPlayBtn').className = mode === 'pass_play' 
+                ? 'py-2 px-2 rounded-xl border-2 font-bold text-xs bg-amber-600 border-yellow-300 text-white shadow-md'
+                : 'py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900';
+
+            document.getElementById('modeVsAiBtn').className = mode === 'vs_ai' 
+                ? 'py-2 px-2 rounded-xl border-2 font-bold text-xs bg-amber-600 border-yellow-300 text-white shadow-md'
+                : 'py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900';
+
+            document.getElementById('modeOnlineBtn').className = mode === 'online' 
+                ? 'py-2 px-2 rounded-xl border-2 font-bold text-xs bg-amber-600 border-yellow-300 text-white shadow-md'
+                : 'py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900';
+
+            const onlineSection = document.getElementById('onlineControlsSection');
+            const pCountSection = document.getElementById('playerCountSection');
+
+            if (mode === 'online') {
+                onlineSection.classList.remove('hidden');
+                pCountSection.classList.add('hidden');
+            } else {
+                onlineSection.classList.add('hidden');
+                pCountSection.classList.remove('hidden');
+            }
+
+            updateColorPickerUI();
+        };
+
+        window.selectPlayerCount = function(count) {
+            totalPlayers = count;
+            [2, 3, 4].forEach(c => {
+                const btn = document.getElementById(`pCountBtn-${c}`);
+                if (btn) {
+                    btn.className = (c === count)
+                        ? 'pCountBtn py-2 rounded-xl border-2 border-yellow-300 bg-amber-600 font-bold text-white shadow-md'
+                        : 'pCountBtn py-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-amber-200';
+                }
+            });
+
+            if (count === 2) activePlayersList = [0, 2];
+            else if (count === 3) activePlayersList = [0, 1, 2];
+            else activePlayersList = [0, 1, 2, 3];
+
+            updateColorPickerUI();
+        };
+
+        function updateColorPickerUI() {
+            const container = document.getElementById('colorPickerContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            PLAYER_COLORS.forEach((col, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const isSelected = (humanPlayerIdx === idx);
+                btn.className = `py-2 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 text-white shadow ${
+                    isSelected ? 'border-yellow-300 scale-105 ring-2 ring-yellow-400' : 'border-stone-700 opacity-70'
+                }`;
+                btn.style.backgroundColor = col.code;
+                btn.innerHTML = `<span>${['🔴','🟢','🟡','🔵'][idx]}</span> <span>${col.name}</span>`;
+                btn.onclick = () => {
+                    humanPlayerIdx = idx;
+                    updateColorPickerUI();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        window.startGame = function() {
+            tokens = [
+                [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+                [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+                [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
+                [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }]
+            ];
+
+            if (gameMode === 'vs_ai') {
+                if (totalPlayers === 2) {
+                    const opp = (humanPlayerIdx + 2) % 4;
+                    activePlayersList = [humanPlayerIdx, opp].sort((a, b) => a - b);
+                } else if (totalPlayers === 3) {
+                    activePlayersList = [0, 1, 2];
+                } else {
+                    activePlayersList = [0, 1, 2, 3];
+                }
+            }
+
+            activePlayerIdx = activePlayersList[0];
+            diceRolled = false;
+            isMoving = false;
+            consecutiveSixes = 0;
+
+            document.getElementById('setupModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('restartModal').classList.add('hidden');
+
+            updateScoreboard();
+            updateTurnUI();
+            drawBoard();
+
+            showToastBanner('Match Started! 🚀', 'May the best player win!');
+
+            if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
+                setTimeout(() => { rollDice(activePlayerIdx); }, 800);
+            }
+        };
+
+        function triggerVictory(winnerIdx) {
+            const name = PLAYER_COLORS[winnerIdx].name;
+            document.getElementById('winnerText').innerText = `${name} Wins!`;
+            document.getElementById('victoryModal').classList.remove('hidden');
+            audioEngine.playVictory();
+        }
+
+        window.openRestartModal = function() {
+            document.getElementById('restartModal').classList.remove('hidden');
+        };
+
+        window.closeRestartModal = function() {
+            document.getElementById('restartModal').classList.add('hidden');
+        };
+
+        window.confirmRestart = function() {
+            document.getElementById('restartModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('setupModal').classList.remove('hidden');
+        };
+
+        window.onload = function() {
+            window.selectPlayerCount(4);
+            window.selectGameMode('pass_play');
+            drawBoard();
+        };
+    </script>
+</body>
+</html>
