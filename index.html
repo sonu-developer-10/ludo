@@ -360,6 +360,8 @@
                     </div>
                     <p id="lobbyStatusMsg" class="text-[10px] text-amber-200/80 mb-2">Waiting for friends to join...</p>
                     <div id="connectedPlayersList" class="flex flex-col gap-1 mb-3 text-xs text-left font-mono"></div>
+                    <button type="button" id="hostStartGameBtn" onclick="window.startGame()" class="hidden w-full py-2.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-extrabold text-sm rounded-xl shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">🚀 START MATCH</button>
+                    <p id="guestWaitingMsg" class="hidden text-xs text-yellow-200/80 mt-2">Waiting for the host to start the match…</p>
                 </div>
             </div>
 
@@ -1286,9 +1288,13 @@
             const name = document.getElementById('playerNameInput').value.trim() || 'Host Player';
             myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
             isHost = true;
-            humanPlayerIdx = 0;
-            onlinePlayerNames[0] = name;
-            activePlayersList = [0, 1]; // Default 2 Players for Online Room
+            onlinePlayerNames = ['', '', '', ''];
+            onlinePlayerNames[humanPlayerIdx] = name;
+            activePlayersList = [humanPlayerIdx, ...[0, 1, 2, 3].filter(idx => idx !== humanPlayerIdx).slice(0, totalPlayers - 1)];
+            roomConnections = [];
+            document.getElementById('hostStartGameBtn').classList.remove('hidden');
+            document.getElementById('hostStartGameBtn').disabled = true;
+            document.getElementById('guestWaitingMsg').classList.add('hidden');
 
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer server...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
@@ -1301,7 +1307,7 @@
 
             peer.on('open', (id) => {
                 document.getElementById('displayRoomCode').innerText = myRoomCode;
-                document.getElementById('lobbyStatusMsg').innerText = 'Room Created! Share code with friends.';
+                document.getElementById('lobbyStatusMsg').innerText = `Room created. Waiting for ${totalPlayers - 1} guest(s) to join.`;
                 updateLobbyUI();
             });
 
@@ -1337,7 +1343,8 @@
 
             myRoomCode = code;
             isHost = false;
-
+            document.getElementById('hostStartGameBtn').classList.add('hidden');
+            document.getElementById('guestWaitingMsg').classList.remove('hidden');
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to Room Host...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
 
@@ -1379,15 +1386,29 @@
             const listElem = document.getElementById('connectedPlayersList');
             if (!listElem) return;
             listElem.innerHTML = '';
-
-            onlinePlayerNames.forEach((n, idx) => {
-                if (idx < activePlayersList.length) {
-                    const d = document.createElement('div');
-                    d.className = 'text-yellow-300 flex items-center justify-between bg-black/40 px-2 py-1 rounded';
-                    d.innerHTML = `<span>${PLAYER_COLORS[idx].name}: ${n}</span> <span class="text-[10px] text-green-400">● READY</span>`;
-                    listElem.appendChild(d);
-                }
+            activePlayersList.forEach(playerIdx => {
+                const name = onlinePlayerNames[playerIdx];
+                const isHostSeat = isHost && playerIdx === humanPlayerIdx;
+                const isConnected = isHostSeat || Boolean(name && name.trim());
+                const d = document.createElement('div');
+                d.className = 'text-yellow-300 flex items-center justify-between bg-black/40 px-2 py-1 rounded';
+                const status = isHostSeat ? '● HOST' : (isConnected ? '● JOINED' : '○ WAITING');
+                d.innerHTML = `<span>${PLAYER_COLORS[playerIdx].name}: ${name || 'Waiting for player…'}</span> <span class="text-[10px] ${isConnected ? 'text-green-400' : 'text-amber-300'}">${status}</span>`;
+                listElem.appendChild(d);
             });
+            const joinedGuests = roomConnections.filter(c => c && c.open).length;
+            const startBtn = document.getElementById('hostStartGameBtn');
+            if (startBtn && isHost) {
+                startBtn.classList.remove('hidden');
+                startBtn.disabled = joinedGuests < 1;
+                startBtn.innerText = joinedGuests < 1 ? '⏳ WAITING FOR GUEST' : '🚀 START MATCH';
+            }
+            if (isHost) {
+                const waitingFor = Math.max(0, totalPlayers - 1 - joinedGuests);
+                document.getElementById('lobbyStatusMsg').innerText = joinedGuests
+                    ? `${joinedGuests} guest(s) joined. You can start the match.`
+                    : `Room created. Waiting for ${waitingFor} guest(s) to join.`;
+            }
         }
 
         function broadcastNetworkMsg(msg, senderConn = null) {
@@ -1404,27 +1425,39 @@
 
         function handleNetworkData(data, conn) {
             if (data.type === 'JOIN' && isHost) {
-                const assignedIdx = roomConnections.length; // Guest 1 gets idx 1 (Green)
+                const assignedIdx = activePlayersList.find(idx => idx !== humanPlayerIdx && !onlinePlayerNames[idx]);
+                if (roomConnections.filter(c => c && c.open).length > totalPlayers - 1 || assignedIdx === undefined) {
+                    conn.send({ type: 'ROOM_FULL' });
+                    conn.close();
+                    return;
+                }
                 onlinePlayerNames[assignedIdx] = data.name || 'Guest Player';
-                
-                // Welcome guest and tell them their assigned player index & current player names
-                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList });
-                
-                // Broadcast updated names list to all participants
+                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList, totalPlayers });
                 updateLobbyUI();
-                broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames });
+                broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList });
             } else if (data.type === 'WELCOME') {
                 humanPlayerIdx = data.playerIdx;
                 onlinePlayerNames = data.names;
                 if (data.activePlayers) activePlayersList = data.activePlayers;
+                if (data.totalPlayers) totalPlayers = data.totalPlayers;
+                document.getElementById('setupModal').classList.remove('hidden');
+                document.getElementById('onlineControlsSection').classList.remove('hidden');
+                document.getElementById('roomLobbyPanel').classList.remove('hidden');
+                document.getElementById('hostStartGameBtn').classList.add('hidden');
+                document.getElementById('guestWaitingMsg').classList.remove('hidden');
+                document.getElementById('startGameModalBtn').classList.add('hidden');
                 updateLobbyUI();
             } else if (data.type === 'UPDATE_NAMES') {
                 onlinePlayerNames = data.names;
+                if (data.activePlayersList) activePlayersList = data.activePlayersList;
                 updateLobbyUI();
+            } else if (data.type === 'ROOM_FULL') {
+                document.getElementById('lobbyStatusMsg').innerText = 'This room is full. Please join another room.';
             } else if (data.type === 'START_GAME') {
                 gameMode = 'online';
                 onlinePlayerNames = data.names;
                 activePlayersList = data.activePlayersList || [0, 1];
+                if (data.totalPlayers) totalPlayers = data.totalPlayers;
                 document.getElementById('setupModal').classList.add('hidden');
                 initGameEngine();
             } else if (data.type === 'DICE_CLICK') {
@@ -1465,12 +1498,17 @@
 
             if (mode === 'online') {
                 onlineSection.classList.remove('hidden');
-                pCountSection.classList.add('hidden');
+                pCountSection.classList.remove('hidden');
+                document.getElementById('startGameModalBtn').classList.add('hidden');
+                document.getElementById('colorSelectLabel').innerText = 'Host Color';
+                window.switchOnlineTab('create');
             } else {
                 onlineSection.classList.add('hidden');
                 pCountSection.classList.remove('hidden');
+                document.getElementById('startGameModalBtn').classList.remove('hidden');
+                document.getElementById('colorSelectLabel').innerText = 'Your Color';
+                document.getElementById('roomLobbyPanel').classList.add('hidden');
             }
-
             updateColorPickerUI();
         };
 
@@ -1485,10 +1523,11 @@
                 }
             });
 
-            if (count === 2) activePlayersList = [0, 2];
-            else if (count === 3) activePlayersList = [0, 1, 2];
-            else activePlayersList = [0, 1, 2, 3];
-
+            if (gameMode !== 'online') {
+                if (count === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
+                else if (count === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(idx => idx !== humanPlayerIdx).slice(0, 2)].sort((a,b) => a-b);
+                else activePlayersList = [0, 1, 2, 3];
+            }
             updateColorPickerUI();
         };
 
@@ -1507,7 +1546,13 @@
                 btn.style.backgroundColor = col.code;
                 btn.innerHTML = `<span>${['🔴','🟢','🟡','🔵'][idx]}</span> <span>${col.name}</span>`;
                 btn.onclick = () => {
+                    if (gameMode === 'online' && isHost && roomConnections.some(c => c && c.open) && idx !== humanPlayerIdx && activePlayersList.includes(idx)) return;
                     humanPlayerIdx = idx;
+                    if (gameMode !== 'online') {
+                        if (totalPlayers === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
+                        else if (totalPlayers === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(i => i !== humanPlayerIdx).slice(0,2)].sort((a,b) => a-b);
+                        else activePlayersList = [0,1,2,3];
+                    }
                     updateColorPickerUI();
                 };
                 container.appendChild(btn);
@@ -1516,14 +1561,14 @@
 
         window.startGame = function() {
             if (gameMode === 'online') {
-                if (isHost) {
-                    // Host triggers the game start for all joined clients
-                    broadcastNetworkMsg({ type: 'START_GAME', names: onlinePlayerNames, activePlayersList: activePlayersList });
-                    initGameEngine();
-                } else {
-                    alert("Please wait for the Host to click START MATCH!");
+                if (!isHost) return;
+                const joinedGuests = roomConnections.filter(c => c && c.open).length;
+                if (joinedGuests < 1) {
+                    document.getElementById('lobbyStatusMsg').innerText = 'At least one guest must join before you can start.';
                     return;
                 }
+                broadcastNetworkMsg({ type: 'START_GAME', names: onlinePlayerNames, activePlayersList, totalPlayers, hostPlayerIdx: humanPlayerIdx });
+                initGameEngine();
             } else {
                 initGameEngine();
             }
@@ -1548,7 +1593,9 @@
                 }
             }
 
-            activePlayerIdx = activePlayersList[0];
+            activePlayerIdx = (gameMode !== 'online' && activePlayersList.includes(humanPlayerIdx))
+                ? humanPlayerIdx
+                : activePlayersList[0];
             diceRolled = false;
             isMoving = false;
             consecutiveSixes = 0;
