@@ -142,6 +142,11 @@
             box-shadow: 0 0 15px #ffd700, inset 0 0 10px rgba(255,215,0,0.3) !important;
             border-color: #ffe066 !important;
         }
+        .premium-glow { animation: premiumGlow 2.4s ease-in-out infinite alternate; }
+        @keyframes premiumGlow { from { box-shadow: 0 0 8px rgba(255,195,0,.18), inset 0 0 8px rgba(255,255,255,.04); } to { box-shadow: 0 0 22px rgba(255,195,0,.42), inset 0 0 12px rgba(255,255,255,.08); } }
+        .chat-message { overflow-wrap: anywhere; animation: chatPop .18s ease-out; }
+        @keyframes chatPop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4">
@@ -302,6 +307,46 @@
         </div>
     </main>
 
+    <!-- MATCH TOOLS: CHAT, RECONNECT, STATS, REPLAY -->
+    <section class="w-full max-w-2xl mt-3 mb-4 rounded-2xl border border-yellow-600/40 bg-gradient-to-r from-yellow-950/80 to-stone-950/90 p-3 shadow-xl premium-glow">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div class="text-xs font-bold uppercase tracking-wider text-yellow-200">✨ Match Tools</div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="window.openStats()" class="rounded-lg border border-yellow-600/50 bg-amber-900/70 px-3 py-1.5 text-xs font-bold text-yellow-100">🏆 Stats</button>
+          <button onclick="window.showReplay()" class="rounded-lg border border-yellow-600/50 bg-amber-900/70 px-3 py-1.5 text-xs font-bold text-yellow-100">📜 Replay</button>
+          <button id="reconnectBtn" onclick="window.reconnectOnline()" class="hidden rounded-lg border border-emerald-500/50 bg-emerald-900/70 px-3 py-1.5 text-xs font-bold text-emerald-100">🔄 Reconnect</button>
+          <button id="vibrationBtn" onclick="window.toggleVibration()" class="rounded-lg border border-yellow-600/50 bg-amber-900/70 px-3 py-1.5 text-xs font-bold text-yellow-100">📳 Vibration On</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-2" id="quickEmotes">
+        <button onclick="window.sendEmoji('😂')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">😂</button>
+        <button onclick="window.sendEmoji('😎')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">😎</button>
+        <button onclick="window.sendEmoji('🔥')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">🔥</button>
+        <button onclick="window.sendEmoji('👏')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">👏</button>
+        <button onclick="window.sendEmoji('😭')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">😭</button>
+        <button onclick="window.sendEmoji('🍀')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-lg">🍀</button>
+        <button onclick="window.sendEmoji('GG!')" class="rounded-lg bg-stone-800 px-3 py-1.5 text-xs font-bold text-yellow-100">GG!</button>
+      </div>
+      <div id="chatLog" aria-live="polite" class="h-20 overflow-y-auto rounded-lg border border-yellow-900/70 bg-black/40 p-2 text-xs text-amber-100 space-y-1"><div class="text-amber-400/60">Game reactions and match events will appear here.</div></div>
+      <div id="connectionStatus" class="mt-2 text-[10px] text-amber-300/70">Local match tools ready. Online reconnection is available after joining a room.</div>
+    </section>
+
+    <div id="statsModal" class="fixed inset-0 modal-bg z-[60] hidden items-center justify-center p-4">
+      <div class="w-full max-w-sm rounded-2xl border-2 border-yellow-500 bg-gradient-to-b from-yellow-950 to-stone-950 p-5 shadow-2xl">
+        <div class="flex items-center justify-between mb-3"><h3 class="text-2xl font-heading font-bold gold-text">YOUR STATS</h3><button onclick="window.closeStats()" class="rounded-lg bg-stone-800 px-3 py-1">✕</button></div>
+        <div id="statsContent" class="grid grid-cols-2 gap-2 text-sm"></div>
+        <button onclick="window.resetStats()" class="mt-4 w-full rounded-lg bg-red-900/80 border border-red-600/50 p-2 text-xs font-bold">Reset Statistics</button>
+      </div>
+    </div>
+
+    <div id="replayModal" class="fixed inset-0 modal-bg z-[60] hidden items-center justify-center p-4">
+      <div class="w-full max-w-md rounded-2xl border-2 border-yellow-500 bg-gradient-to-b from-yellow-950 to-stone-950 p-5 shadow-2xl">
+        <div class="flex items-center justify-between mb-3"><h3 class="text-2xl font-heading font-bold gold-text">MATCH REPLAY</h3><button onclick="window.closeReplay()" class="rounded-lg bg-stone-800 px-3 py-1">✕</button></div>
+        <p class="text-xs text-amber-200/70 mb-2">Recent actions from this match. This is an event log, not a video recording.</p>
+        <div id="replayContent" class="max-h-72 overflow-y-auto rounded-lg bg-black/40 p-3 text-xs text-amber-100 space-y-1"></div>
+      </div>
+    </div>
+
     <!-- MAIN GAME SETUP MODAL -->
     <div id="setupModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 z-50">
         <div class="bg-gradient-to-b from-yellow-950 to-stone-900 border-4 border-yellow-500/80 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative">
@@ -408,9 +453,10 @@
             <h3 id="winnerText" class="text-2xl font-heading text-yellow-300 mb-4">Player Wins!</h3>
             <p class="text-xs text-amber-200/80 mb-6">Congratulations on a magnificent victory!</p>
             
-            <button onclick="window.confirmRestart()" class="w-full py-3.5 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-black font-extrabold text-lg rounded-xl shadow-xl hover:brightness-110 transition active:scale-95">
-                🏆 PLAY AGAIN
-            </button>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button onclick="window.confirmRestart()" class="w-full py-3.5 bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-black font-extrabold text-lg rounded-xl shadow-xl hover:brightness-110 transition active:scale-95">🏆 NEW GAME</button>
+              <button id="rematchBtn" onclick="window.requestRematch()" class="hidden w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold text-lg rounded-xl shadow-xl hover:brightness-110 transition active:scale-95">🔁 REMATCH</button>
+            </div>
         </div>
     </div>
 
@@ -541,6 +587,95 @@
             document.getElementById('soundToggleBtn').innerText = audioEngine.muted ? '🔇' : '🔊';
         };
 
+        function vibrate(pattern = 25) {
+            if (vibrationEnabled && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
+        }
+        function addMatchEvent(message, sync = false) {
+            const entry = { at: new Date().toISOString(), message: String(message).slice(0, 180) };
+            matchEvents.push(entry);
+            if (matchEvents.length > 200) matchEvents.shift();
+            const log = document.getElementById('chatLog');
+            if (log) {
+                const row = document.createElement('div'); row.className = 'chat-message';
+                const time = new Date(entry.at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                row.textContent = `${time} · ${entry.message}`;
+                log.appendChild(row); log.scrollTop = log.scrollHeight;
+            }
+            if (sync && gameMode === 'online') broadcastNetworkMsg({type:'CHAT', message:entry.message, at:entry.at});
+        }
+        window.toggleVibration = function() {
+            vibrationEnabled = !vibrationEnabled;
+            const b = document.getElementById('vibrationBtn'); if (b) b.textContent = vibrationEnabled ? '📳 Vibration On' : '📴 Vibration Off';
+            try { localStorage.setItem('royalLudoVibration', vibrationEnabled ? '1' : '0'); } catch(e) {}
+            vibrate(15);
+        };
+        window.sendEmoji = function(emoji) {
+            addMatchEvent(`${onlinePlayerNames[humanPlayerIdx] || PLAYER_COLORS[humanPlayerIdx].name}: ${emoji}`, true);
+            vibrate(20);
+        };
+        function readStats() {
+            try { return JSON.parse(localStorage.getItem('royalLudoStats') || '{"played":0,"wins":0,"losses":0,"draws":0,"recent":[]}'); }
+            catch(e) { return {played:0,wins:0,losses:0,draws:0,recent:[]}; }
+        }
+        function saveMatchResult(winnerIdx) {
+            if (gameFinished) return;
+            gameFinished = true; lastWinnerIdx = winnerIdx;
+            const stats = readStats(); stats.played = (stats.played || 0) + 1;
+            const won = winnerIdx === humanPlayerIdx;
+            if (won) stats.wins = (stats.wins || 0) + 1; else stats.losses = (stats.losses || 0) + 1;
+            stats.recent = Array.isArray(stats.recent) ? stats.recent : [];
+            stats.recent.unshift({date:new Date().toLocaleString(), mode:gameMode, winner:onlinePlayerNames[winnerIdx] || PLAYER_COLORS[winnerIdx].name, result:won?'Win':'Loss', duration:Math.max(0,Math.round((Date.now()-matchStartedAt)/1000))});
+            stats.recent = stats.recent.slice(0, 12);
+            try { localStorage.setItem('royalLudoStats', JSON.stringify(stats)); } catch(e) {}
+            addMatchEvent(`${onlinePlayerNames[winnerIdx] || PLAYER_COLORS[winnerIdx].name} won the match!`);
+        }
+        window.openStats = function() {
+            const stats = readStats();
+            document.getElementById('statsContent').innerHTML = '';
+            [['Matches',stats.played||0],['Wins',stats.wins||0],['Losses',stats.losses||0],['Win rate',`${stats.played ? Math.round((stats.wins||0)/stats.played*100) : 0}%`]].forEach(([label,value]) => {
+                const el=document.createElement('div'); el.className='rounded-xl border border-yellow-800/70 bg-black/30 p-3';
+                const a=document.createElement('div'); a.className='text-[10px] uppercase text-amber-300'; a.textContent=label;
+                const b=document.createElement('div'); b.className='text-2xl font-bold text-yellow-100'; b.textContent=value;
+                el.append(a,b); document.getElementById('statsContent').appendChild(el);
+            });
+            const modal=document.getElementById('statsModal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+        };
+        window.closeStats = function() { const m=document.getElementById('statsModal'); m.classList.add('hidden'); m.classList.remove('flex'); };
+        window.resetStats = function() { if (!confirm('Reset all local statistics?')) return; try { localStorage.removeItem('royalLudoStats'); } catch(e) {} window.openStats(); };
+        window.showReplay = function() {
+            const box=document.getElementById('replayContent'); box.innerHTML='';
+            if (!matchEvents.length) { box.textContent='No match events yet. Start a match to build a replay log.'; }
+            else matchEvents.slice().reverse().forEach(ev => { const row=document.createElement('div'); row.className='border-b border-yellow-900/50 py-1'; row.textContent=`${new Date(ev.at).toLocaleTimeString()} · ${ev.message}`; box.appendChild(row); });
+            const modal=document.getElementById('replayModal'); modal.classList.remove('hidden'); modal.classList.add('flex');
+        };
+        window.closeReplay = function() { const m=document.getElementById('replayModal'); m.classList.add('hidden'); m.classList.remove('flex'); };
+        function snapshotGame() { return { tokens, activePlayersList, activePlayerIdx, diceValue, diceRolled, consecutiveSixes, totalPlayers, humanPlayerIdx, onlinePlayerNames, gameFinished, matchEvents:matchEvents.slice(-100) }; }
+        function applyGameSnapshot(data) {
+            if (!data || !Array.isArray(data.tokens)) return;
+            tokens=data.tokens; activePlayersList=data.activePlayersList||activePlayersList; activePlayerIdx=data.activePlayerIdx ?? activePlayerIdx;
+            diceValue=data.diceValue||0; diceRolled=!!data.diceRolled; consecutiveSixes=data.consecutiveSixes||0;
+            totalPlayers=data.totalPlayers||totalPlayers; onlinePlayerNames=data.onlinePlayerNames||onlinePlayerNames; gameFinished=!!data.gameFinished;
+            matchEvents=data.matchEvents||matchEvents; updateScoreboard(); updateTurnUI(); drawBoard();
+            document.getElementById('setupModal').classList.add('hidden');
+            addMatchEvent('Game state restored after reconnect.');
+        }
+        window.reconnectOnline = function() {
+            if (!myRoomCode) { addMatchEvent('No previous room code is available on this device.'); return; }
+            reconnecting = true;
+            document.getElementById('connectionStatus').textContent='Reconnecting to room…';
+            document.getElementById('reconnectBtn').classList.add('hidden');
+            const name = lastRoomName || document.getElementById('joinPlayerNameInput').value.trim() || 'Guest Player';
+            if (peer) { try { peer.destroy(); } catch(e){} }
+            peer = new Peer(PEER_CONFIG);
+            peer.on('open', () => {
+                hostConnection = peer.connect(`rl-ludo-${myRoomCode}`, {reliable:true});
+                hostConnection.on('open', () => { hostConnection.send({type:'JOIN', name, reconnect:true}); document.getElementById('connectionStatus').textContent='Connected; syncing match…'; });
+                hostConnection.on('data', handleNetworkData);
+                hostConnection.on('close', () => { document.getElementById('reconnectBtn').classList.remove('hidden'); document.getElementById('connectionStatus').textContent='Connection lost. Tap Reconnect to try again.'; });
+            });
+            peer.on('error', () => { document.getElementById('reconnectBtn').classList.remove('hidden'); document.getElementById('connectionStatus').textContent='Reconnect failed. Check connection and try again.'; });
+        };
+
         window.toggleSpeed = function() {
             animSpeedMultiplier = (animSpeedMultiplier === 1) ? 2 : 1;
             const btn = document.getElementById('speedToggleBtn');
@@ -637,6 +772,13 @@
         let isHost = false;
         let myRoomCode = '';
         let onlinePlayerNames = ['Host Player', 'Guest Player', 'Player 3', 'Player 4'];
+        let vibrationEnabled = true;
+        let matchEvents = [];
+        let matchStartedAt = 0;
+        let lastRoomName = '';
+        let reconnecting = false;
+        let lastWinnerIdx = null;
+        let gameFinished = false;
 
         const PEER_CONFIG = {
             config: {
@@ -923,7 +1065,7 @@
         }
 
         window.handleDiceClick = function(playerIdx) {
-            if (isMoving || diceRolled) return;
+            if (isMoving || diceRolled || gameFinished) return;
             if (playerIdx !== activePlayerIdx) return;
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) return;
             if (gameMode === 'online' && activePlayerIdx !== humanPlayerIdx) return;
@@ -975,6 +1117,8 @@
             // Show the rolled number beside ROLL only after the animation finishes.
             setTimeout(() => {
                 if (badge) badge.classList.remove('hidden');
+                addMatchEvent(`${onlinePlayerNames[playerIdx] || PLAYER_COLORS[playerIdx].name} rolled ${diceValue}.`);
+                vibrate(diceValue === 6 ? [35,35,60] : 18);
                 processDiceRollOutcome();
             }, 800);
         }
@@ -999,6 +1143,7 @@
 
             movableTokenIds = getMovableTokens(activePlayerIdx, diceValue);
             drawBoard();
+            if (gameMode === 'online' && isHost) broadcastNetworkMsg({type:'GAME_STATE', state:snapshotGame()});
 
             if (movableTokenIds.length === 0) {
                 showToastBanner('No Valid Moves ❌', 'Passing Turn');
@@ -1062,7 +1207,9 @@
         });
 
         function moveToken(playerIdx, tokenId) {
-            if (isMoving) return;
+            if (isMoving || gameFinished) return;
+            addMatchEvent(`${onlinePlayerNames[playerIdx] || PLAYER_COLORS[playerIdx].name} moved token ${tokenId + 1}.`);
+            vibrate(18);
             isMoving = true;
             movableTokenIds = [];
 
@@ -1118,6 +1265,7 @@
                                         extraTurn = true;
                                         audioEngine.playCapture();
                                         showToastBanner('Token Captured! ⚔️', `${PLAYER_COLORS[otherPIdx].name}'s token captured!`);
+                                        addMatchEvent(`${PLAYER_COLORS[playerIdx].name} captured ${PLAYER_COLORS[otherPIdx].name}'s token!`); vibrate([40,30,70]);
                                     }
                                 }
                             });
@@ -1130,6 +1278,7 @@
 
             isMoving = false;
             drawBoard();
+            if (gameMode === 'online' && isHost) broadcastNetworkMsg({type:'GAME_STATE', state:snapshotGame()});
 
             if (extraTurn) {
                 diceRolled = false;
@@ -1154,6 +1303,7 @@
 
             updateTurnUI();
             drawBoard();
+            if (gameMode === 'online' && isHost) broadcastNetworkMsg({type:'GAME_STATE', state:snapshotGame()});
 
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
                 setTimeout(() => {
@@ -1296,6 +1446,7 @@
 
         window.createOnlineRoom = function() {
             const name = document.getElementById('playerNameInput').value.trim() || 'Host Player';
+            lastRoomName = name;
             myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
             isHost = true;
             if (totalPlayers === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
@@ -1334,6 +1485,7 @@
 
                 conn.on('close', () => {
                     roomConnections = roomConnections.filter(c => c !== conn);
+                    document.getElementById('connectionStatus').textContent='A player disconnected. They can reconnect using the same name and room code.';
                     updateLobbyUI();
                 });
             });
@@ -1346,6 +1498,7 @@
 
         window.joinOnlineRoom = function() {
             const name = document.getElementById('joinPlayerNameInput').value.trim() || 'Guest Player';
+            lastRoomName = name;
             const code = document.getElementById('roomCodeInput').value.trim();
 
             if (!code || code.length < 4) {
@@ -1383,6 +1536,8 @@
 
                 hostConnection.on('close', () => {
                     document.getElementById('lobbyStatusMsg').innerText = 'Connection lost with Host.';
+                    document.getElementById('connectionStatus').textContent='Connection lost. Tap Reconnect to restore your match.';
+                    document.getElementById('reconnectBtn').classList.remove('hidden');
                 });
 
                 hostConnection.on('error', (err) => {
@@ -1439,19 +1594,23 @@
 
         function handleNetworkData(data, conn) {
             if (data.type === 'JOIN' && isHost) {
-                const assignedIdx = activePlayersList.find(idx => idx !== humanPlayerIdx && !onlinePlayerNames[idx]);
+                const reconnectIdx = data.reconnect ? activePlayersList.find(idx => idx !== humanPlayerIdx && onlinePlayerNames[idx] && onlinePlayerNames[idx] === data.name) : undefined;
+                const assignedIdx = reconnectIdx !== undefined ? reconnectIdx : activePlayersList.find(idx => idx !== humanPlayerIdx && !onlinePlayerNames[idx]);
                 if (roomConnections.filter(c => c && c.open).length > totalPlayers - 1 || assignedIdx === undefined) {
                     conn.send({ type: 'ROOM_FULL' });
                     conn.close();
                     return;
                 }
                 onlinePlayerNames[assignedIdx] = data.name || 'Guest Player';
-                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList, totalPlayers });
+                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList, totalPlayers, reconnect: !!data.reconnect });
+                if (data.reconnect && matchStartedAt) conn.send({type:'GAME_STATE', state:snapshotGame()});
                 updateLobbyUI();
                 broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList });
             } else if (data.type === 'WELCOME') {
                 humanPlayerIdx = data.playerIdx;
                 onlinePlayerNames = data.names;
+                document.getElementById('connectionStatus').textContent='Connected to room '+myRoomCode+'.';
+                document.getElementById('reconnectBtn').classList.add('hidden');
                 if (data.activePlayers) activePlayersList = data.activePlayers;
                 if (data.totalPlayers) totalPlayers = data.totalPlayers;
                 document.getElementById('setupModal').classList.remove('hidden');
@@ -1461,6 +1620,18 @@
                 document.getElementById('guestWaitingMsg').classList.remove('hidden');
                 document.getElementById('startGameModalBtn').classList.add('hidden');
                 updateLobbyUI();
+            } else if (data.type === 'GAME_STATE') {
+                applyGameSnapshot(data.state);
+            } else if (data.type === 'CHAT') {
+                if (isHost) broadcastNetworkMsg(data, conn);
+                addMatchEvent(data.message || 'Reaction received.');
+            } else if (data.type === 'REMATCH_REQUEST' && isHost) {
+                addMatchEvent(`${data.name || 'A player'} requested a rematch.`);
+                if (confirm(`${data.name || 'A player'} wants a rematch. Start a new match?`)) window.requestRematch();
+            } else if (data.type === 'REMATCH') {
+                document.getElementById('victoryModal').classList.add('hidden');
+                if (data.names) onlinePlayerNames=data.names; if (data.activePlayersList) activePlayersList=data.activePlayersList; if (data.totalPlayers) totalPlayers=data.totalPlayers;
+                initGameEngine();
             } else if (data.type === 'UPDATE_NAMES') {
                 onlinePlayerNames = data.names;
                 if (data.activePlayersList) activePlayersList = data.activePlayersList;
@@ -1475,14 +1646,12 @@
                 document.getElementById('setupModal').classList.add('hidden');
                 initGameEngine();
             } else if (data.type === 'DICE_CLICK') {
-                if (isHost) {
-                    broadcastNetworkMsg(data, conn);
-                }
+                if (data.playerIdx !== activePlayerIdx || diceRolled || isMoving || !activePlayersList.includes(data.playerIdx)) return;
+                if (isHost) broadcastNetworkMsg(data, conn);
                 rollDice(data.playerIdx, data.diceValue);
             } else if (data.type === 'MOVE_TOKEN') {
-                if (isHost) {
-                    broadcastNetworkMsg(data, conn);
-                }
+                if (data.playerIdx !== activePlayerIdx || !diceRolled || isMoving || !movableTokenIds.includes(data.tokenId)) return;
+                if (isHost) broadcastNetworkMsg(data, conn);
                 moveToken(data.playerIdx, data.tokenId);
             }
         }
@@ -1587,6 +1756,9 @@
         };
 
         function initGameEngine() {
+            gameFinished = false; lastWinnerIdx = null; matchEvents = []; matchStartedAt = Date.now();
+            const chatLog = document.getElementById('chatLog'); if (chatLog) chatLog.innerHTML = '';
+            addMatchEvent('Match started. Good luck!');
             tokens = [
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
@@ -1628,11 +1800,22 @@
         }
 
         function triggerVictory(winnerIdx) {
+            if (gameFinished) return;
+            saveMatchResult(winnerIdx);
             const name = (gameMode === 'online') ? onlinePlayerNames[winnerIdx] : PLAYER_COLORS[winnerIdx].name;
             document.getElementById('winnerText').innerText = `${name} Wins!`;
             document.getElementById('victoryModal').classList.remove('hidden');
             audioEngine.playVictory();
+            vibrate([60,40,60,40,140]);
+            const replayBtn = document.getElementById('rematchBtn'); if (replayBtn) replayBtn.classList.toggle('hidden', gameMode !== 'online' || !isHost);
         }
+
+        window.requestRematch = function() {
+            if (gameMode !== 'online') { initGameEngine(); document.getElementById('victoryModal').classList.add('hidden'); return; }
+            if (!isHost) { addMatchEvent('Rematch request sent to host.'); broadcastNetworkMsg({type:'REMATCH_REQUEST', name:onlinePlayerNames[humanPlayerIdx]}); return; }
+            broadcastNetworkMsg({type:'REMATCH', names:onlinePlayerNames, activePlayersList, totalPlayers});
+            document.getElementById('victoryModal').classList.add('hidden'); initGameEngine();
+        };
 
         window.openRestartModal = function() {
             document.getElementById('restartModal').classList.remove('hidden');
@@ -1649,6 +1832,8 @@
         };
 
         window.onload = function() {
+            try { vibrationEnabled = localStorage.getItem('royalLudoVibration') !== '0'; } catch(e) {}
+            const vibBtn = document.getElementById('vibrationBtn'); if (vibBtn) vibBtn.textContent = vibrationEnabled ? '📳 Vibration On' : '📴 Vibration Off';
             window.selectPlayerCount(4);
             window.selectGameMode('pass_play');
             drawBoard();
