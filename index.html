@@ -154,6 +154,45 @@
         .chat-message { overflow-wrap: anywhere; animation: chatPop .18s ease-out; }
         @keyframes chatPop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+        /* ROYAL LUDO BRAND SYSTEM — midnight navy, premium gold, neon jewel tones */
+        :root { color-scheme: dark; --royal-bg:#020617; --royal-panel:rgba(8,17,35,.88); --royal-gold:#ffd34d; --royal-gold-deep:#b77913; --royal-blue:#168bff; }
+        html { background:#020617; }
+        body { min-height:100dvh; padding:clamp(8px,2vw,22px); gap:12px; background:radial-gradient(ellipse at 50% -10%,rgba(26,77,139,.34),transparent 42%),radial-gradient(ellipse at 50% 40%,#0b1427 0%,#040914 62%,#02040a 100%); color:#eef4ff; }
+        body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.18; background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px); background-size:34px 34px; mask-image:linear-gradient(to bottom,black,transparent 90%); }
+        header { max-width:900px !important; padding:12px 16px !important; margin-bottom:4px !important; border:1px solid rgba(255,207,80,.52) !important; border-radius:18px !important; background:linear-gradient(115deg,rgba(8,18,37,.96),rgba(13,25,45,.86)) !important; box-shadow:0 12px 35px #0008,inset 0 1px 0 #ffffff16,0 0 22px #e8a92c12 !important; }
+        header h1 { font-size:clamp(1.65rem,4vw,2.25rem) !important; letter-spacing:2px !important; }
+        .gold-text { background:linear-gradient(120deg,#fff5bd 0%,#ffd34d 28%,#e9a323 58%,#fff0a0 78%,#bc7b16 100%); background-size:180% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 8px #ffbd392b); }
+        main { max-width:900px !important; gap:10px; }
+        .board-frame { padding:clamp(5px,1.2vw,12px) !important; border:5px solid transparent !important; border-radius:22px !important; background:linear-gradient(#081326,#081326) padding-box,linear-gradient(135deg,#fff0a4,#a86c14 24%,#fff1a8 48%,#4b8fc7 72%,#e8b23d) border-box !important; box-shadow:0 24px 65px #000b,0 0 0 1px #ffffff0c,0 0 32px #e7a92a20,inset 0 0 20px #0009 !important; overflow:hidden; }
+        #gameCanvas { border-radius:10px; }
+        .player-card { min-width:0; border-radius:15px !important; background:linear-gradient(145deg,rgba(15,29,52,.97),rgba(4,10,22,.97)) !important; border-width:1px !important; box-shadow:inset 0 1px 0 #ffffff12,0 9px 22px #0006 !important; backdrop-filter:blur(12px); }
+        .active-turn-card { border-color:#ffd34d !important; box-shadow:0 0 0 1px #ffd34d66,0 0 24px #ffc53340,inset 0 0 15px #ffc53313 !important; }
+        button { transition:transform .16s ease,filter .16s ease,box-shadow .16s ease; }
+        button:hover { filter:brightness(1.1); }
+        button:active { transform:translateY(1px) scale(.985); }
+        header button, #soundToggleBtn, #speedToggleBtn { background:linear-gradient(145deg,#172844,#081326) !important; color:#ffdc76 !important; border:1px solid #d5a63e8a !important; border-radius:11px !important; }
+        #setupModal { background:rgba(1,5,14,.84) !important; backdrop-filter:blur(12px); }
+        #setupModal > div { max-height:min(92dvh,900px); overflow-y:auto; border:1px solid #e5b844 !important; border-radius:26px !important; padding:clamp(18px,4vw,30px) !important; background:radial-gradient(ellipse at 50% 0%,#183354 0%,#0b172b 42%,#050b16 100%) !important; box-shadow:0 30px 100px #000c,0 0 0 5px #e7b94a0b,0 0 40px #eab53a20 !important; }
+        #setupModal > div::before { content:"✦  PLAY  •  ROLL  •  WIN  ✦"; display:block; margin:-7px 0 12px; color:#e9c66b; font-size:9px; font-weight:700; letter-spacing:3px; }
+        #setupModal .text-5xl { filter:drop-shadow(0 0 16px #ffc53a55); }
+        #modePassPlayBtn,#modeVsAiBtn,#modeOnlineBtn { min-height:68px; border-radius:15px !important; border-width:1px !important; background:linear-gradient(145deg,#14243d,#081326) !important; border-color:#526b8c !important; color:#e8f1ff !important; box-shadow:inset 0 1px 0 #ffffff15,0 7px 18px #0005 !important; line-height:1.4; }
+        #modePassPlayBtn { border-color:#e5b64d !important; background:linear-gradient(145deg,#8b5411,#39260c) !important; color:#fff2be !important; }
+        #modeVsAiBtn { border-color:#24bd83 !important; }
+        #modeOnlineBtn { border-color:#218bfa !important; }
+        #modePassPlayBtn:hover,#modeVsAiBtn:hover,#modeOnlineBtn:hover { transform:translateY(-2px); box-shadow:0 10px 24px #0007,0 0 15px #ffd34d20 !important; }
+        #onlineControlsSection { border:1px solid #476587 !important; border-radius:17px !important; background:linear-gradient(145deg,#0b1c33f2,#060d1bf5) !important; box-shadow:inset 0 1px 0 #ffffff0d; }
+        input,select { background:#050d1b !important; color:#f5f7ff !important; border:1px solid #526b8c !important; border-radius:10px !important; min-height:40px; }
+        input:focus,select:focus { outline:none !important; border-color:#ffd34d !important; box-shadow:0 0 0 3px #ffd34d20 !important; }
+        #onlineControlsSection button, #setupModal button { border-radius:11px; }
+        #onlineControlsSection button[onclick*="createOnlineRoom"],#onlineControlsSection button[onclick*="joinOnlineRoom"],#setupModal button[onclick*="startGame"] { min-height:44px; background:linear-gradient(135deg,#fff0a0,#ffc32c 42%,#d88710) !important; color:#171006 !important; border:1px solid #fff0a0 !important; box-shadow:0 5px 0 #75490d,0 8px 18px #0005,inset 0 1px 0 #fff9 !important; font-weight:800; }
+        .premium-glow { animation:none !important; border-color:#bd9746 !important; background:linear-gradient(145deg,rgba(11,27,49,.96),rgba(4,10,21,.98)) !important; box-shadow:0 12px 30px #0005,inset 0 1px 0 #ffffff12 !important; }
+        .modal-bg { background:rgba(1,5,14,.84) !important; backdrop-filter:blur(10px); }
+        #statsModal > div,#replayModal > div { border:1px solid #e0b54d !important; border-radius:22px !important; background:linear-gradient(145deg,#102440,#050b16) !important; }
+        .scene { filter:drop-shadow(0 5px 5px #0007); }
+        @media (max-width:520px) { body { padding:7px !important; gap:8px; } header { padding:9px 11px !important; border-radius:15px !important; } header .text-3xl { font-size:1.65rem !important; } header button { padding:6px 8px !important; } main { gap:7px; } .player-card { padding:6px !important; } .player-card .scene { width:34px; height:34px; transform:scale(.78); transform-origin:center; margin:-4px; } .player-card .cube-face { width:34px; height:34px; } .player-card .dot { width:6px; height:6px; } .board-frame { border-width:3px !important; border-radius:16px !important; } #setupModal { padding:10px !important; } #setupModal > div { padding:19px 15px !important; border-radius:21px !important; } #modePassPlayBtn,#modeVsAiBtn,#modeOnlineBtn { min-height:61px; padding:7px 4px !important; font-size:11px !important; } }
+        @media (min-width:768px) { .board-frame { max-width:560px !important; } main { max-width:940px !important; } }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between p-2 md:p-4">
@@ -772,6 +811,8 @@
         let isMoving = false;
         let consecutiveSixes = 0;
         let animSpeedMultiplier = 1;
+        let activeMoveTimer = null;
+        let activeMoveWatchdog = null;
         let currentRotX = [0, 0, 0, 0];
         let currentRotY = [0, 0, 0, 0];
 
@@ -1214,34 +1255,66 @@
         });
 
         function moveToken(playerIdx, tokenId) {
-            if (isMoving || gameFinished) return;
+            // Guard against duplicate clicks, stale online messages, and invalid token IDs.
+            if (isMoving || gameFinished || !Array.isArray(tokens[playerIdx])) return;
+            const token = tokens[playerIdx][tokenId];
+            if (!token || !Number.isFinite(Number(diceValue)) || Number(diceValue) < 1 || Number(diceValue) > 6) return;
+            if (token.pos === -1 && diceValue !== 6) return;
+
+            // Clear any stale animation timers so a previous interrupted move cannot lock the game.
+            if (activeMoveTimer !== null) clearInterval(activeMoveTimer);
+            if (activeMoveWatchdog !== null) clearTimeout(activeMoveWatchdog);
+            activeMoveTimer = null;
+            activeMoveWatchdog = null;
+
             addMatchEvent(`${onlinePlayerNames[playerIdx] || PLAYER_COLORS[playerIdx].name} moved token ${tokenId + 1}.`);
             vibrate(18);
             isMoving = true;
             movableTokenIds = [];
 
-            const token = tokens[playerIdx][tokenId];
-            const stepsToMove = (token.pos === -1 && diceValue === 6) ? 1 : diceValue;
+            const stepsToMove = (token.pos === -1 && diceValue === 6) ? 1 : Number(diceValue);
             let currentStep = 0;
-
-            const moveInterval = setInterval(() => {
-                if (token.pos === -1 && diceValue === 6) {
-                    token.pos = 0;
-                } else {
-                    token.pos += 1;
-                }
-
-                currentStep++;
-                audioEngine.playTokenStep();
-                drawBoard();
-
-                if (currentStep >= stepsToMove) {
-                    clearInterval(moveInterval);
-                    setTimeout(() => {
+            let completed = false;
+            const finishMove = () => {
+                if (completed) return;
+                completed = true;
+                if (activeMoveTimer !== null) clearInterval(activeMoveTimer);
+                if (activeMoveWatchdog !== null) clearTimeout(activeMoveWatchdog);
+                activeMoveTimer = null;
+                activeMoveWatchdog = null;
+                // Always release the movement lock even if rendering/audio encounters a device-specific error.
+                isMoving = false;
+                setTimeout(() => {
+                    try {
                         handlePostMoveRules(playerIdx, token);
-                    }, 150);
+                    } catch (err) {
+                        console.error('Move finalization failed:', err);
+                        isMoving = false;
+                        diceRolled = false;
+                        nextTurn();
+                    }
+                }, 150);
+            };
+
+            // A watchdog prevents a bad frame/device exception from leaving the match stuck forever.
+            activeMoveWatchdog = setTimeout(() => {
+                console.warn('Move animation watchdog recovered a stalled move.');
+                finishMove();
+            }, Math.max(3000, (180 / Math.max(1, Number(animSpeedMultiplier) || 1)) * stepsToMove + 2500));
+
+            activeMoveTimer = setInterval(() => {
+                try {
+                    if (token.pos === -1 && diceValue === 6) token.pos = 0;
+                    else token.pos += 1;
+                    currentStep++;
+                    try { audioEngine.playTokenStep(); } catch (audioErr) { console.warn('Token audio unavailable:', audioErr); }
+                    drawBoard();
+                    if (currentStep >= stepsToMove) finishMove();
+                } catch (err) {
+                    console.error('Move animation recovered from an error:', err);
+                    finishMove();
                 }
-            }, 180 / animSpeedMultiplier);
+            }, 180 / Math.max(1, Number(animSpeedMultiplier) || 1));
         }
 
         function handlePostMoveRules(playerIdx, movedToken) {
