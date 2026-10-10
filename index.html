@@ -366,7 +366,7 @@
             </div>
 
             <!-- Player Count Selector -->
-            <div id="playerCountSection" class="mb-6 text-left">
+            <div id="playerCountSection" class="mb-6 text-left hidden">
                 <label class="block text-xs text-amber-300 font-bold uppercase mb-1">Number of Players</label>
                 <div class="grid grid-cols-3 gap-2">
                     <button type="button" onclick="window.selectPlayerCount(2)" id="pCountBtn-2" class="pCountBtn py-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-amber-200">2 Players</button>
@@ -376,13 +376,13 @@
             </div>
 
             <!-- Color Picker Section -->
-            <div id="colorPickerSection" class="mb-6 text-left">
+            <div id="colorPickerSection" class="mb-6 text-left hidden">
                 <label id="colorSelectLabel" class="block text-xs text-amber-300 font-bold uppercase mb-1">Your Color</label>
                 <div id="colorPickerContainer" class="grid grid-cols-4 gap-2"></div>
             </div>
 
             <!-- Start Match Button -->
-            <button id="startGameModalBtn" onclick="window.startGame()" class="w-full py-3.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-extrabold text-xl rounded-xl shadow-xl hover:brightness-110 active:scale-95 transition">
+            <button id="startGameModalBtn" onclick="window.startGame()" class="hidden w-full py-3.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-extrabold text-xl rounded-xl shadow-xl hover:brightness-110 active:scale-95 transition">
                 🚀 START MATCH
             </button>
         </div>
@@ -1270,13 +1270,20 @@
             const joinPanel = document.getElementById('joinRoomPanel');
             const tabCreate = document.getElementById('tabCreateRoom');
             const tabJoin = document.getElementById('tabJoinRoom');
+            const pCountSection = document.getElementById('playerCountSection');
+            const colorSection = document.getElementById('colorPickerSection');
 
             if (tab === 'create') {
+                pCountSection.classList.remove('hidden');
+                colorSection.classList.remove('hidden');
                 createPanel.classList.remove('hidden');
                 joinPanel.classList.add('hidden');
                 tabCreate.className = 'py-1.5 text-xs font-bold rounded-lg bg-yellow-500 text-black border border-yellow-200';
                 tabJoin.className = 'py-1.5 text-xs font-bold rounded-lg bg-stone-800 text-amber-200 border border-stone-600';
             } else {
+                // Guests join the host's configured match; they cannot choose a color.
+                pCountSection.classList.add('hidden');
+                colorSection.classList.add('hidden');
                 createPanel.classList.add('hidden');
                 joinPanel.classList.remove('hidden');
                 tabJoin.className = 'py-1.5 text-xs font-bold rounded-lg bg-yellow-500 text-black border border-yellow-200';
@@ -1288,9 +1295,11 @@
             const name = document.getElementById('playerNameInput').value.trim() || 'Host Player';
             myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
             isHost = true;
+            if (totalPlayers === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
+            else if (totalPlayers === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(idx => idx !== humanPlayerIdx).slice(0,2)].sort((a,b) => a-b);
+            else activePlayersList = [0,1,2,3];
             onlinePlayerNames = ['', '', '', ''];
             onlinePlayerNames[humanPlayerIdx] = name;
-            activePlayersList = [humanPlayerIdx, ...[0, 1, 2, 3].filter(idx => idx !== humanPlayerIdx).slice(0, totalPlayers - 1)];
             roomConnections = [];
             document.getElementById('hostStartGameBtn').classList.remove('hidden');
             document.getElementById('hostStartGameBtn').disabled = true;
@@ -1343,6 +1352,8 @@
 
             myRoomCode = code;
             isHost = false;
+            document.getElementById('playerCountSection').classList.add('hidden');
+            document.getElementById('colorPickerSection').classList.add('hidden');
             document.getElementById('hostStartGameBtn').classList.add('hidden');
             document.getElementById('guestWaitingMsg').classList.remove('hidden');
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to Room Host...';
@@ -1496,15 +1507,17 @@
             const onlineSection = document.getElementById('onlineControlsSection');
             const pCountSection = document.getElementById('playerCountSection');
 
+            // Show player-count and color controls only after a mode is selected.
+            pCountSection.classList.remove('hidden');
+            document.getElementById('colorPickerSection').classList.remove('hidden');
+
             if (mode === 'online') {
                 onlineSection.classList.remove('hidden');
-                pCountSection.classList.remove('hidden');
                 document.getElementById('startGameModalBtn').classList.add('hidden');
                 document.getElementById('colorSelectLabel').innerText = 'Host Color';
                 window.switchOnlineTab('create');
             } else {
                 onlineSection.classList.add('hidden');
-                pCountSection.classList.remove('hidden');
                 document.getElementById('startGameModalBtn').classList.remove('hidden');
                 document.getElementById('colorSelectLabel').innerText = 'Your Color';
                 document.getElementById('roomLobbyPanel').classList.add('hidden');
@@ -1523,11 +1536,9 @@
                 }
             });
 
-            if (gameMode !== 'online') {
-                if (count === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
-                else if (count === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(idx => idx !== humanPlayerIdx).slice(0, 2)].sort((a,b) => a-b);
-                else activePlayersList = [0, 1, 2, 3];
-            }
+            if (count === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
+            else if (count === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(idx => idx !== humanPlayerIdx).slice(0, 2)].sort((a,b) => a-b);
+            else activePlayersList = [0, 1, 2, 3];
             updateColorPickerUI();
         };
 
@@ -1548,11 +1559,9 @@
                 btn.onclick = () => {
                     if (gameMode === 'online' && isHost && roomConnections.some(c => c && c.open) && idx !== humanPlayerIdx && activePlayersList.includes(idx)) return;
                     humanPlayerIdx = idx;
-                    if (gameMode !== 'online') {
-                        if (totalPlayers === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
-                        else if (totalPlayers === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(i => i !== humanPlayerIdx).slice(0,2)].sort((a,b) => a-b);
-                        else activePlayersList = [0,1,2,3];
-                    }
+                    if (totalPlayers === 2) activePlayersList = [humanPlayerIdx, (humanPlayerIdx + 2) % 4].sort((a,b) => a-b);
+                    else if (totalPlayers === 3) activePlayersList = [humanPlayerIdx, ...[0,1,2,3].filter(i => i !== humanPlayerIdx).slice(0,2)].sort((a,b) => a-b);
+                    else activePlayersList = [0,1,2,3];
                     updateColorPickerUI();
                 };
                 container.appendChild(btn);
