@@ -335,7 +335,7 @@
                 <!-- Create Room Sub-Panel -->
                 <div id="createRoomPanel">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
-                    <input type="text" id="playerNameInput" value="Player 1" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="playerNameInput" value="Host Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 focus:outline-none focus:border-yellow-400">
                     <button type="button" onclick="window.createOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
                         ➕ CREATE ROOM CODE
                     </button>
@@ -344,7 +344,7 @@
                 <!-- Join Room Sub-Panel -->
                 <div id="joinRoomPanel" class="hidden">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Your Name</label>
-                    <input type="text" id="joinPlayerNameInput" value="Player 2" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-2 focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="joinPlayerNameInput" value="Guest Player" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-2 focus:outline-none focus:border-yellow-400">
                     <label class="block text-[11px] text-amber-300 font-semibold mb-1">Enter 5-Digit Room Code</label>
                     <input type="text" id="roomCodeInput" placeholder="e.g. 84920" class="w-full bg-stone-900 border border-yellow-600/50 rounded-lg px-2.5 py-1.5 text-xs text-yellow-200 mb-3 uppercase tracking-wider focus:outline-none focus:border-yellow-400">
                     <button type="button" onclick="window.joinOnlineRoom()" class="w-full py-2 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-extrabold text-xs rounded-lg shadow active:scale-95 transition">
@@ -634,7 +634,7 @@
         let hostConnection = null;
         let isHost = false;
         let myRoomCode = '';
-        let onlinePlayerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+        let onlinePlayerNames = ['Host Player', 'Guest Player', 'Player 3', 'Player 4'];
 
         const PEER_CONFIG = {
             config: {
@@ -1283,11 +1283,12 @@
         };
 
         window.createOnlineRoom = function() {
-            const name = document.getElementById('playerNameInput').value.trim() || 'King Player';
+            const name = document.getElementById('playerNameInput').value.trim() || 'Host Player';
             myRoomCode = Math.floor(10000 + Math.random() * 90000).toString();
             isHost = true;
             humanPlayerIdx = 0;
             onlinePlayerNames[0] = name;
+            activePlayersList = [0, 1]; // Default 2 Players for Online Room
 
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer server...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
@@ -1326,7 +1327,7 @@
         };
 
         window.joinOnlineRoom = function() {
-            const name = document.getElementById('joinPlayerNameInput').value.trim() || 'Friend Player';
+            const name = document.getElementById('joinPlayerNameInput').value.trim() || 'Guest Player';
             const code = document.getElementById('roomCodeInput').value.trim();
 
             if (!code || code.length < 4) {
@@ -1352,7 +1353,7 @@
                 hostConnection.on('open', () => {
                     document.getElementById('displayRoomCode').innerText = code;
                     document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host...';
-                    hostConnection.send({ type: 'JOIN', name });
+                    hostConnection.send({ type: 'JOIN', name: name });
                 });
 
                 hostConnection.on('data', (data) => {
@@ -1403,14 +1404,19 @@
 
         function handleNetworkData(data, conn) {
             if (data.type === 'JOIN' && isHost) {
-                const assignedIdx = roomConnections.length;
-                onlinePlayerNames[assignedIdx] = data.name;
-                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames });
+                const assignedIdx = roomConnections.length; // Guest 1 gets idx 1 (Green)
+                onlinePlayerNames[assignedIdx] = data.name || 'Guest Player';
+                
+                // Welcome guest and tell them their assigned player index & current player names
+                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList });
+                
+                // Broadcast updated names list to all participants
                 updateLobbyUI();
                 broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames });
             } else if (data.type === 'WELCOME') {
                 humanPlayerIdx = data.playerIdx;
                 onlinePlayerNames = data.names;
+                if (data.activePlayers) activePlayersList = data.activePlayers;
                 updateLobbyUI();
             } else if (data.type === 'UPDATE_NAMES') {
                 onlinePlayerNames = data.names;
@@ -1418,8 +1424,9 @@
             } else if (data.type === 'START_GAME') {
                 gameMode = 'online';
                 onlinePlayerNames = data.names;
+                activePlayersList = data.activePlayersList || [0, 1];
                 document.getElementById('setupModal').classList.add('hidden');
-                startGame();
+                initGameEngine();
             } else if (data.type === 'DICE_CLICK') {
                 if (isHost) {
                     broadcastNetworkMsg(data, conn);
@@ -1508,10 +1515,21 @@
         }
 
         window.startGame = function() {
-            if (gameMode === 'online' && isHost) {
-                broadcastNetworkMsg({ type: 'START_GAME', names: onlinePlayerNames });
+            if (gameMode === 'online') {
+                if (isHost) {
+                    // Host triggers the game start for all joined clients
+                    broadcastNetworkMsg({ type: 'START_GAME', names: onlinePlayerNames, activePlayersList: activePlayersList });
+                    initGameEngine();
+                } else {
+                    alert("Please wait for the Host to click START MATCH!");
+                    return;
+                }
+            } else {
+                initGameEngine();
             }
+        };
 
+        function initGameEngine() {
             tokens = [
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
                 [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
@@ -1548,7 +1566,7 @@
             if (gameMode === 'vs_ai' && activePlayerIdx !== humanPlayerIdx) {
                 setTimeout(() => { rollDice(activePlayerIdx); }, 800);
             }
-        };
+        }
 
         function triggerVictory(winnerIdx) {
             const name = (gameMode === 'online') ? onlinePlayerNames[winnerIdx] : PLAYER_COLORS[winnerIdx].name;
