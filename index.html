@@ -636,6 +636,18 @@
         let myRoomCode = '';
         let onlinePlayerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
 
+        const PEER_CONFIG = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' }
+                ]
+            }
+        };
+
         let tokens = [
             [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
             [{ id: 0, pos: -1 }, { id: 1, pos: -1 }, { id: 2, pos: -1 }, { id: 3, pos: -1 }],
@@ -1277,10 +1289,14 @@
             humanPlayerIdx = 0;
             onlinePlayerNames[0] = name;
 
-            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer network...';
+            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer server...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
 
-            peer = new Peer(`royal-ludo-${myRoomCode}`);
+            if (peer) {
+                try { peer.destroy(); } catch(e){}
+            }
+
+            peer = new Peer(`rl-ludo-${myRoomCode}`, PEER_CONFIG);
 
             peer.on('open', (id) => {
                 document.getElementById('displayRoomCode').innerText = myRoomCode;
@@ -1289,7 +1305,9 @@
             });
 
             peer.on('connection', (conn) => {
-                roomConnections.push(conn);
+                conn.on('open', () => {
+                    roomConnections.push(conn);
+                });
 
                 conn.on('data', (data) => {
                     handleNetworkData(data, conn);
@@ -1302,8 +1320,8 @@
             });
 
             peer.on('error', (err) => {
-                alert('Connection Error: ' + err.type + '. Retrying...');
-                document.getElementById('lobbyStatusMsg').innerText = 'Error creating room. Try again.';
+                console.error('PeerJS Host Error:', err);
+                document.getElementById('lobbyStatusMsg').innerText = 'Error creating room (' + err.type + '). Retry!';
             });
         };
 
@@ -1322,14 +1340,18 @@
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to Room Host...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
 
-            peer = new Peer();
+            if (peer) {
+                try { peer.destroy(); } catch(e){}
+            }
+
+            peer = new Peer(PEER_CONFIG);
 
             peer.on('open', () => {
-                hostConnection = peer.connect(`royal-ludo-${code}`);
+                hostConnection = peer.connect(`rl-ludo-${code}`, { reliable: true });
 
                 hostConnection.on('open', () => {
                     document.getElementById('displayRoomCode').innerText = code;
-                    document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host to start...';
+                    document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host...';
                     hostConnection.send({ type: 'JOIN', name });
                 });
 
@@ -1337,13 +1359,18 @@
                     handleNetworkData(data, hostConnection);
                 });
 
+                hostConnection.on('close', () => {
+                    document.getElementById('lobbyStatusMsg').innerText = 'Connection lost with Host.';
+                });
+
                 hostConnection.on('error', (err) => {
-                    alert('Could not connect to room host.');
+                    document.getElementById('lobbyStatusMsg').innerText = 'Connection Error: ' + err;
                 });
             });
 
             peer.on('error', (err) => {
-                alert('Failed to connect to network: ' + err.type);
+                console.error('PeerJS Join Error:', err);
+                document.getElementById('lobbyStatusMsg').innerText = 'Failed to connect: ' + err.type;
             });
         };
 
