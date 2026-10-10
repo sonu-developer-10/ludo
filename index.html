@@ -453,6 +453,13 @@
                     </div>
                     <p id="lobbyStatusMsg" class="text-[10px] text-amber-200/80 mb-2">Waiting for friends to join...</p>
                     <div id="connectedPlayersList" class="flex flex-col gap-1 mb-3 text-xs text-left font-mono"></div>
+                    <div id="onlineVoicePanel" class="hidden rounded-xl border border-yellow-500/40 bg-slate-950/80 p-3 mb-3 text-left">
+                        <div class="flex items-center justify-between gap-2">
+                            <div><div class="text-xs font-extrabold text-yellow-300">🎙️ ROOM VOICE CHAT</div><div id="voiceStatus" class="text-[10px] text-amber-100/70 mt-1">Voice is off</div></div>
+                            <button type="button" id="voiceToggleBtn" onclick="window.toggleRoomVoice()" class="px-3 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-950 text-xs font-extrabold">🎤 JOIN VOICE</button>
+                        </div>
+                        <p class="text-[10px] text-amber-100/60 mt-2">Only available in Online Room. Allow microphone access when your browser asks.</p>
+                    </div>
                     <button type="button" id="hostStartGameBtn" onclick="window.startGame()" class="hidden w-full py-2.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black font-extrabold text-sm rounded-xl shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">🚀 START MATCH</button>
                     <p id="guestWaitingMsg" class="hidden text-xs text-yellow-200/80 mt-2">Waiting for the host to start the match…</p>
                 </div>
@@ -829,6 +836,18 @@
         let reconnecting = false;
         let lastWinnerIdx = null;
         let gameFinished = false;
+        // Online Room voice uses browser WebRTC audio; signaling is relayed through the room host.
+        let roomVoiceEnabled = false;
+        let roomVoiceStream = null;
+        let voicePeers = new Map();
+        let voicePeerIds = {};
+        let voiceSeatByPeerId = {};
+        let pendingVoiceCandidates = new Map();
+
+        const VOICE_RTC_CONFIG = { iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]};
 
         const PEER_CONFIG = {
             config: {
@@ -1550,6 +1569,7 @@
             peer = new Peer(`rl-ludo-${myRoomCode}`, PEER_CONFIG);
 
             peer.on('open', (id) => {
+                voicePeerIds = { [humanPlayerIdx]: id }; voiceSeatByPeerId = { [id]: humanPlayerIdx };
                 document.getElementById('displayRoomCode').innerText = myRoomCode;
                 document.getElementById('lobbyStatusMsg').innerText = `Room created. Waiting for ${totalPlayers - 1} guest(s) to join.`;
                 updateLobbyUI();
@@ -1609,7 +1629,7 @@
                 hostConnection.on('open', () => {
                     document.getElementById('displayRoomCode').innerText = code;
                     document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host...';
-                    hostConnection.send({ type: 'JOIN', name: name });
+                    hostConnection.send({ type: 'JOIN', name: name, peerId: peer.id });
                 });
 
                 hostConnection.on('data', (data) => {
@@ -1633,9 +1653,101 @@
             });
         };
 
+        function updateVoiceUI() {
+            const panel = document.getElementById('onlineVoicePanel');
+            const status = document.getElementById('voiceStatus');
+            const btn = document.getElementById('voiceToggleBtn');
+            if (panel) panel.classList.toggle('hidden', gameMode !== 'online' || !myRoomCode);
+            if (status) status.textContent = roomVoiceEnabled ? 'Connected voice enabled · tap to mute/leave' : 'Voice is off';
+            if (btn) btn.textContent = roomVoiceEnabled ? '🔇 LEAVE VOICE' : '🎤 JOIN VOICE';
+        }
+
+        function sendVoiceSignal(toIdx, signal) {
+            broadcastNetworkMsg({ type: 'VOICE_SIGNAL', fromIdx: humanPlayerIdx, toIdx, signal });
+        }
+
+        async function ensureVoicePeer(remoteIdx) {
+            if (!roomVoiceEnabled || remoteIdx === humanPlayerIdx || voicePeers.has(remoteIdx)) return;
+            const remotePeerId = voicePeerIds[remoteIdx];
+            if (!remotePeerId || !peer) return;
+            const pc = new RTCPeerConnection(VOICE_RTC_CONFIG);
+            voicePeers.set(remoteIdx, pc);
+            if (roomVoiceStream) roomVoiceStream.getTracks().forEach(track => pc.addTrack(track, roomVoiceStream));
+            pc.ontrack = (event) => {
+                let audio = document.getElementById('voiceAudio-' + remoteIdx);
+                if (!audio) {
+                    audio = document.createElement('audio'); audio.id = 'voiceAudio-' + remoteIdx;
+                    audio.autoplay = true; audio.playsInline = true; audio.className = 'hidden'; document.body.appendChild(audio);
+                }
+                audio.srcObject = event.streams[0]; audio.play().catch(() => {});
+            };
+            pc.onicecandidate = (event) => { if (event.candidate) sendVoiceSignal(remoteIdx, { candidate: event.candidate }); };
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+                    try { pc.close(); } catch(e) {} voicePeers.delete(remoteIdx);
+                }
+            };
+            // Deterministic offerer avoids simultaneous-offer glare in mesh rooms.
+            if (humanPlayerIdx < remoteIdx) {
+                const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+                sendVoiceSignal(remoteIdx, { description: pc.localDescription });
+            }
+        }
+
+        async function handleVoiceSignal(data) {
+            if (!roomVoiceEnabled || data.toIdx !== humanPlayerIdx || data.fromIdx === humanPlayerIdx) return;
+            let pc = voicePeers.get(data.fromIdx);
+            if (!pc) { await ensureVoicePeer(data.fromIdx); pc = voicePeers.get(data.fromIdx); }
+            if (!pc) return;
+            try {
+                if (data.signal && data.signal.description) {
+                    const desc = data.signal.description;
+                    await pc.setRemoteDescription(new RTCSessionDescription(desc));
+                    const queued = pendingVoiceCandidates.get(data.fromIdx) || [];
+                    for (const candidate of queued) { try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {} }
+                    pendingVoiceCandidates.delete(data.fromIdx);
+                    if (desc.type === 'offer') {
+                        const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
+                        sendVoiceSignal(data.fromIdx, { description: pc.localDescription });
+                    }
+                } else if (data.signal && data.signal.candidate) {
+                    if (!pc.remoteDescription) {
+                        const queued = pendingVoiceCandidates.get(data.fromIdx) || []; queued.push(data.signal.candidate); pendingVoiceCandidates.set(data.fromIdx, queued);
+                    } else await pc.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                }
+            } catch (err) { console.warn('Voice negotiation issue:', err); }
+        }
+
+        window.toggleRoomVoice = async function() {
+            if (gameMode !== 'online' || !myRoomCode) {
+                const status = document.getElementById('voiceStatus'); if (status) status.textContent = 'Create or join an Online Room first.';
+                return;
+            }
+            if (roomVoiceEnabled) {
+                roomVoiceEnabled = false;
+                voicePeers.forEach(pc => { try { pc.close(); } catch(e) {} }); voicePeers.clear(); pendingVoiceCandidates.clear();
+                if (roomVoiceStream) roomVoiceStream.getTracks().forEach(track => track.stop()); roomVoiceStream = null;
+                document.querySelectorAll('audio[id^="voiceAudio-"]').forEach(a => { a.srcObject = null; a.remove(); });
+                updateVoiceUI(); return;
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.RTCPeerConnection) {
+                const status = document.getElementById('voiceStatus'); if (status) status.textContent = 'Voice chat needs a supported browser and HTTPS.';
+                return;
+            }
+            try {
+                roomVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+                roomVoiceEnabled = true; updateVoiceUI();
+                Object.keys(voicePeerIds).map(Number).filter(idx => idx !== humanPlayerIdx).forEach(idx => ensureVoicePeer(idx).catch(console.warn));
+            } catch (err) {
+                const status = document.getElementById('voiceStatus');
+                if (status) status.textContent = err && err.name === 'NotAllowedError' ? 'Microphone permission denied. Allow mic access and retry.' : 'Could not start microphone. Check browser/device settings.';
+            }
+        };
+
         function updateLobbyUI() {
             const listElem = document.getElementById('connectedPlayersList');
             if (!listElem) return;
+            updateVoiceUI();
             listElem.innerHTML = '';
             activePlayersList.forEach(playerIdx => {
                 const name = onlinePlayerNames[playerIdx];
@@ -1675,7 +1787,14 @@
         }
 
         function handleNetworkData(data, conn) {
-            if (data.type === 'JOIN' && isHost) {
+            if (data.type === 'VOICE_SIGNAL') {
+                if (isHost && data.toIdx !== humanPlayerIdx) {
+                    const target = roomConnections.find(c => c && c.open && c !== conn && c.peer === voicePeerIds[data.toIdx]);
+                    if (target) target.send(data);
+                } else if (data.toIdx === humanPlayerIdx) {
+                    handleVoiceSignal(data).catch(err => console.warn('Voice signal error:', err));
+                }
+            } else if (data.type === 'JOIN' && isHost) {
                 const reconnectIdx = data.reconnect ? activePlayersList.find(idx => idx !== humanPlayerIdx && onlinePlayerNames[idx] && onlinePlayerNames[idx] === data.name) : undefined;
                 const assignedIdx = reconnectIdx !== undefined ? reconnectIdx : activePlayersList.find(idx => idx !== humanPlayerIdx && !onlinePlayerNames[idx]);
                 if (roomConnections.filter(c => c && c.open).length > totalPlayers - 1 || assignedIdx === undefined) {
@@ -1684,13 +1803,16 @@
                     return;
                 }
                 onlinePlayerNames[assignedIdx] = data.name || 'Guest Player';
-                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList, totalPlayers, reconnect: !!data.reconnect });
+                if (data.peerId) { voicePeerIds[assignedIdx] = data.peerId; voiceSeatByPeerId[data.peerId] = assignedIdx; }
+                conn.send({ type: 'WELCOME', playerIdx: assignedIdx, names: onlinePlayerNames, activePlayers: activePlayersList, totalPlayers, reconnect: !!data.reconnect, peerIds: voicePeerIds });
                 if (data.reconnect && matchStartedAt) conn.send({type:'GAME_STATE', state:snapshotGame()});
                 updateLobbyUI();
-                broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList });
+                broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList, peerIds: voicePeerIds });
             } else if (data.type === 'WELCOME') {
                 humanPlayerIdx = data.playerIdx;
                 onlinePlayerNames = data.names;
+                voicePeerIds = data.peerIds || {}; if (peer && peer.id) voicePeerIds[humanPlayerIdx] = peer.id;
+                updateVoiceUI();
                 document.getElementById('connectionStatus').textContent='Connected to room '+myRoomCode+'.';
                 document.getElementById('reconnectBtn').classList.add('hidden');
                 if (data.activePlayers) activePlayersList = data.activePlayers;
@@ -1717,6 +1839,7 @@
             } else if (data.type === 'UPDATE_NAMES') {
                 onlinePlayerNames = data.names;
                 if (data.activePlayersList) activePlayersList = data.activePlayersList;
+                if (data.peerIds) { voicePeerIds = data.peerIds; if (peer && peer.id) voicePeerIds[humanPlayerIdx] = peer.id; if (roomVoiceEnabled) Object.keys(voicePeerIds).map(Number).filter(idx => idx !== humanPlayerIdx).forEach(idx => ensureVoicePeer(idx).catch(console.warn)); }
                 updateLobbyUI();
             } else if (data.type === 'ROOM_FULL') {
                 document.getElementById('lobbyStatusMsg').innerText = 'This room is full. Please join another room.';
@@ -1746,6 +1869,7 @@
 
         window.selectGameMode = function(mode) {
             gameMode = mode;
+            updateVoiceUI();
             document.getElementById('modePassPlayBtn').className = mode === 'pass_play' 
                 ? 'py-2 px-2 rounded-xl border-2 font-bold text-xs bg-amber-600 border-yellow-300 text-white shadow-md'
                 : 'py-2 px-2 rounded-xl border-2 border-amber-800 bg-amber-950/60 font-bold text-xs text-amber-300 hover:bg-amber-900';
@@ -1912,6 +2036,11 @@
             document.getElementById('victoryModal').classList.add('hidden');
             document.getElementById('setupModal').classList.remove('hidden');
         };
+
+        window.addEventListener('beforeunload', () => {
+            try { voicePeers.forEach(pc => pc.close()); } catch(e) {}
+            try { if (roomVoiceStream) roomVoiceStream.getTracks().forEach(track => track.stop()); } catch(e) {}
+        });
 
         window.onload = function() {
             try { vibrationEnabled = localStorage.getItem('royalLudoVibration') !== '0'; } catch(e) {}
