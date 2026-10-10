@@ -195,7 +195,7 @@
                             <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                         </div>
                     </div>
-                    <button id="rollBtn-0" onclick="window.handleDiceClick(0)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                    <button id="rollBtn-0" onclick="window.handleDiceClick(0)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-row items-center justify-center gap-1.5">
                         <span>🎲 ROLL</span>
                         <span id="diceValBadge-0" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
                     </button>
@@ -225,7 +225,7 @@
                             <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                         </div>
                     </div>
-                    <button id="rollBtn-1" onclick="window.handleDiceClick(1)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                    <button id="rollBtn-1" onclick="window.handleDiceClick(1)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-row items-center justify-center gap-1.5">
                         <span>🎲 ROLL</span>
                         <span id="diceValBadge-1" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
                     </button>
@@ -263,7 +263,7 @@
                             <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                         </div>
                     </div>
-                    <button id="rollBtn-3" onclick="window.handleDiceClick(3)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                    <button id="rollBtn-3" onclick="window.handleDiceClick(3)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-row items-center justify-center gap-1.5">
                         <span>🎲 ROLL</span>
                         <span id="diceValBadge-3" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
                     </button>
@@ -293,7 +293,7 @@
                             <div class="cube-face face-6"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                         </div>
                     </div>
-                    <button id="rollBtn-2" onclick="window.handleDiceClick(2)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-col items-center">
+                    <button id="rollBtn-2" onclick="window.handleDiceClick(2)" class="px-2 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-extrabold text-xs rounded-lg shadow border border-yellow-200 active:scale-95 transition flex flex-row items-center justify-center gap-1.5">
                         <span>🎲 ROLL</span>
                         <span id="diceValBadge-2" class="text-[10px] bg-black text-yellow-300 px-1 rounded hidden">1</span>
                     </button>
@@ -966,12 +966,15 @@
             }
 
             const badge = document.getElementById(`diceValBadge-${playerIdx}`);
+            // Keep the result hidden while the dice is animating.
             if (badge) {
+                badge.classList.add('hidden');
                 badge.innerText = diceValue;
-                badge.classList.remove('hidden');
             }
 
+            // Show the rolled number beside ROLL only after the animation finishes.
             setTimeout(() => {
+                if (badge) badge.classList.remove('hidden');
                 processDiceRollOutcome();
             }, 800);
         }
