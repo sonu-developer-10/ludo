@@ -834,6 +834,8 @@
         let matchStartedAt = 0;
         let lastRoomName = '';
         let reconnecting = false;
+        let joinAttemptTimer = null;
+        let joinAttemptToken = 0;
         let lastWinnerIdx = null;
         let gameFinished = false;
         // Online Room voice uses browser WebRTC audio; signaling is relayed through the room host.
@@ -1560,16 +1562,26 @@
 
             document.getElementById('lobbyStatusMsg').innerText = 'Connecting to peer server...';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
-            document.getElementById('hostRoomCodeDisplay').classList.remove('hidden');
+            document.getElementById('hostRoomCodeDisplay').classList.add('hidden');
+            document.getElementById('displayRoomCode').innerText = 'WAIT…';
 
             if (peer) {
                 try { peer.destroy(); } catch(e){}
             }
 
             peer = new Peer(`rl-ludo-${myRoomCode}`, PEER_CONFIG);
+            let hostOpened = false;
+            const hostOpenTimer = setTimeout(() => {
+                if (!hostOpened) {
+                    document.getElementById('lobbyStatusMsg').innerText = 'Peer service did not respond. Check internet and tap Create Room again.';
+                    document.getElementById('hostRoomCodeDisplay').classList.add('hidden');
+                }
+            }, 15000);
 
             peer.on('open', (id) => {
+                hostOpened = true; clearTimeout(hostOpenTimer);
                 voicePeerIds = { [humanPlayerIdx]: id }; voiceSeatByPeerId = { [id]: humanPlayerIdx };
+                document.getElementById('hostRoomCodeDisplay').classList.remove('hidden');
                 document.getElementById('displayRoomCode').innerText = myRoomCode;
                 document.getElementById('lobbyStatusMsg').innerText = `Room created. Waiting for ${totalPlayers - 1} guest(s) to join.`;
                 updateLobbyUI();
@@ -1592,8 +1604,17 @@
             });
 
             peer.on('error', (err) => {
+                clearTimeout(hostOpenTimer);
                 console.error('PeerJS Host Error:', err);
-                document.getElementById('lobbyStatusMsg').innerText = 'Error creating room (' + err.type + '). Retry!';
+                const status = document.getElementById('lobbyStatusMsg');
+                if (err && err.type === 'unavailable-id') {
+                    status.innerText = 'This room code is already in use. Please create a new room.';
+                } else if (err && (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error')) {
+                    status.innerText = 'Peer server/network issue. Check internet and tap Create Room again.';
+                } else {
+                    status.innerText = 'Could not register room (' + ((err && err.type) || 'unknown error') + '). Please create the room again.';
+                }
+                document.getElementById('hostRoomCodeDisplay').classList.add('hidden');
             });
         };
 
@@ -1601,56 +1622,87 @@
             const name = document.getElementById('joinPlayerNameInput').value.trim() || 'Guest Player';
             lastRoomName = name;
             const code = document.getElementById('roomCodeInput').value.trim();
-
             if (!/^\d{5}$/.test(code)) {
-                alert('Please enter a valid 5-digit room code.');
+                document.getElementById('lobbyStatusMsg').innerText = 'Please enter a valid 5-digit room code.';
+                document.getElementById('roomLobbyPanel').classList.remove('hidden');
                 return;
             }
-
-            myRoomCode = code;
-            isHost = false;
+            myRoomCode = code; isHost = false; reconnecting = false;
             document.getElementById('playerCountSection').classList.add('hidden');
             document.getElementById('colorPickerSection').classList.add('hidden');
             document.getElementById('hostStartGameBtn').classList.add('hidden');
             document.getElementById('guestWaitingMsg').classList.remove('hidden');
-            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to Room Host...';
+            document.getElementById('lobbyStatusMsg').innerText = 'Connecting to PeerJS service…';
             document.getElementById('roomLobbyPanel').classList.remove('hidden');
             document.getElementById('hostRoomCodeDisplay').classList.add('hidden');
+            document.getElementById('reconnectBtn').classList.add('hidden');
 
-            if (peer) {
-                try { peer.destroy(); } catch(e){}
+            const attempt = ++joinAttemptToken;
+            if (joinAttemptTimer) clearTimeout(joinAttemptTimer);
+            if (hostConnection) { try { hostConnection.close(); } catch(e) {} hostConnection = null; }
+            if (peer) { try { peer.destroy(); } catch(e) {} peer = null; }
+            let gotWelcome = false;
+            const fail = (message) => {
+                if (attempt !== joinAttemptToken || gotWelcome) return;
+                if (joinAttemptTimer) clearTimeout(joinAttemptTimer);
+                joinAttemptTimer = null;
+                document.getElementById('lobbyStatusMsg').innerText = message;
+                document.getElementById('connectionStatus').textContent = message;
+                document.getElementById('reconnectBtn').classList.remove('hidden');
+            };
+            // Overall timeout covers PeerJS startup, host connection, and host WELCOME response.
+            joinAttemptTimer = setTimeout(() => fail('Connection timed out. Keep the host room open, check internet, then tap Reconnect.'), 18000);
+            try {
+                peer = new Peer(PEER_CONFIG);
+                peer.on('open', () => {
+                    if (attempt !== joinAttemptToken) return;
+                    document.getElementById('lobbyStatusMsg').innerText = 'Peer service connected. Contacting room host…';
+                    try {
+                        hostConnection = peer.connect(`rl-ludo-${code}`, { reliable: true });
+                    } catch (err) {
+                        fail('Could not start room connection. Please retry.'); return;
+                    }
+                    hostConnection.on('open', () => {
+                        if (attempt !== joinAttemptToken) return;
+                        document.getElementById('lobbyStatusMsg').innerText = 'Host reached. Joining room…';
+                        document.getElementById('displayRoomCode').innerText = code;
+                        try { hostConnection.send({ type: 'JOIN', name, peerId: peer.id }); }
+                        catch (err) { fail('Connected to host but could not send join request. Please retry.'); }
+                    });
+                    hostConnection.on('data', (data) => {
+                        if (attempt !== joinAttemptToken) return;
+                        if (data && data.type === 'WELCOME') {
+                            gotWelcome = true;
+                            if (joinAttemptTimer) clearTimeout(joinAttemptTimer);
+                            joinAttemptTimer = null;
+                        }
+                        handleNetworkData(data, hostConnection);
+                    });
+                    hostConnection.on('close', () => {
+                        if (attempt !== joinAttemptToken || gotWelcome) return;
+                        fail('Host connection closed before joining. Confirm the room is still open, then retry.');
+                    });
+                    hostConnection.on('error', (err) => {
+                        console.warn('PeerJS guest connection error:', err);
+                        fail('Could not reach that room. Check the 5-digit code and make sure the host is still waiting.');
+                    });
+                });
+                peer.on('disconnected', () => {
+                    if (attempt === joinAttemptToken && !gotWelcome) {
+                        document.getElementById('lobbyStatusMsg').innerText = 'Peer service disconnected. Trying to restore signaling…';
+                        try { if (peer && !peer.destroyed) peer.reconnect(); } catch(e) {}
+                    }
+                });
+                peer.on('error', (err) => {
+                    console.warn('PeerJS Join Error:', err);
+                    const type = err && err.type;
+                    if (type === 'peer-unavailable') fail('Room not found or host is offline. Ask the host to create the room again.');
+                    else if (type === 'network' || type === 'server-error' || type === 'socket-error') fail('Peer service/network issue. Check internet and try again.');
+                    else fail('Connection failed (' + (type || 'unknown error') + '). Please retry.');
+                });
+            } catch (err) {
+                fail('Could not initialize online connection. Refresh the page and try again.');
             }
-
-            peer = new Peer(PEER_CONFIG);
-
-            peer.on('open', () => {
-                hostConnection = peer.connect(`rl-ludo-${code}`, { reliable: true });
-
-                hostConnection.on('open', () => {
-                    document.getElementById('displayRoomCode').innerText = code;
-                    document.getElementById('lobbyStatusMsg').innerText = 'Connected! Waiting for host...';
-                    hostConnection.send({ type: 'JOIN', name: name, peerId: peer.id });
-                });
-
-                hostConnection.on('data', (data) => {
-                    handleNetworkData(data, hostConnection);
-                });
-
-                hostConnection.on('close', () => {
-                    document.getElementById('lobbyStatusMsg').innerText = 'Connection lost with Host.';
-                    document.getElementById('connectionStatus').textContent='Connection lost. Tap Reconnect to restore your match.';
-                    document.getElementById('reconnectBtn').classList.remove('hidden');
-                });
-
-                hostConnection.on('error', (err) => {
-                    document.getElementById('lobbyStatusMsg').innerText = 'Connection Error: ' + err;
-                });
-            });
-
-            peer.on('error', (err) => {
-                console.error('PeerJS Join Error:', err);
-                document.getElementById('lobbyStatusMsg').innerText = 'Failed to connect: ' + err.type;
-            });
         };
 
         function updateVoiceUI() {
@@ -1809,6 +1861,7 @@
                 updateLobbyUI();
                 broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList, peerIds: voicePeerIds });
             } else if (data.type === 'WELCOME') {
+                if (joinAttemptTimer) clearTimeout(joinAttemptTimer); joinAttemptTimer = null;
                 humanPlayerIdx = data.playerIdx;
                 onlinePlayerNames = data.names;
                 voicePeerIds = data.peerIds || {}; if (peer && peer.id) voicePeerIds[humanPlayerIdx] = peer.id;
@@ -1842,7 +1895,9 @@
                 if (data.peerIds) { voicePeerIds = data.peerIds; if (peer && peer.id) voicePeerIds[humanPlayerIdx] = peer.id; if (roomVoiceEnabled) Object.keys(voicePeerIds).map(Number).filter(idx => idx !== humanPlayerIdx).forEach(idx => ensureVoicePeer(idx).catch(console.warn)); }
                 updateLobbyUI();
             } else if (data.type === 'ROOM_FULL') {
+                if (joinAttemptTimer) clearTimeout(joinAttemptTimer); joinAttemptTimer = null;
                 document.getElementById('lobbyStatusMsg').innerText = 'This room is full. Please join another room.';
+                document.getElementById('reconnectBtn').classList.add('hidden');
             } else if (data.type === 'START_GAME') {
                 gameMode = 'online';
                 onlinePlayerNames = data.names;
