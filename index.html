@@ -1642,20 +1642,29 @@
             if (hostConnection) { try { hostConnection.close(); } catch(e) {} hostConnection = null; }
             if (peer) { try { peer.destroy(); } catch(e) {} peer = null; }
             let gotWelcome = false;
+            let joinFailed = false;
+            let joinStage = 'starting PeerJS service';
             const fail = (message) => {
-                if (attempt !== joinAttemptToken || gotWelcome) return;
+                if (attempt !== joinAttemptToken || gotWelcome || joinFailed) return;
+                joinFailed = true;
                 if (joinAttemptTimer) clearTimeout(joinAttemptTimer);
                 joinAttemptTimer = null;
                 document.getElementById('lobbyStatusMsg').innerText = message;
                 document.getElementById('connectionStatus').textContent = message;
                 document.getElementById('reconnectBtn').classList.remove('hidden');
             };
-            // Overall timeout covers PeerJS startup, host connection, and host WELCOME response.
-            joinAttemptTimer = setTimeout(() => fail('Connection timed out. Keep the host room open, check internet, then tap Reconnect.'), 18000);
+            // A single deadline covers signaling startup and WebRTC connection setup.
+            // Stage-specific text helps distinguish a blocked PeerJS service from an unreachable host.
+            joinAttemptTimer = setTimeout(() => {
+                if (joinStage === 'starting PeerJS service') fail('PeerJS service timed out before connecting. Check internet/VPN/firewall, then retry.');
+                else if (joinStage === 'contacting room host') fail('Host connection timed out. Keep the host room open and visible; both devices need internet. Try again, or use a TURN-enabled server if this repeats.');
+                else fail('Host connection opened but no room response arrived. Check that the host is still in the lobby and try again.');
+            }, 30000);
             try {
                 peer = new Peer(PEER_CONFIG);
                 peer.on('open', () => {
                     if (attempt !== joinAttemptToken) return;
+                    joinStage = 'contacting room host';
                     document.getElementById('lobbyStatusMsg').innerText = 'Peer service connected. Contacting room host…';
                     try {
                         hostConnection = peer.connect(`rl-ludo-${code}`, { reliable: true });
@@ -1664,6 +1673,7 @@
                     }
                     hostConnection.on('open', () => {
                         if (attempt !== joinAttemptToken) return;
+                        joinStage = 'waiting for host welcome';
                         document.getElementById('lobbyStatusMsg').innerText = 'Host reached. Joining room…';
                         document.getElementById('displayRoomCode').innerText = code;
                         try { hostConnection.send({ type: 'JOIN', name, peerId: peer.id }); }
@@ -1671,6 +1681,11 @@
                     });
                     hostConnection.on('data', (data) => {
                         if (attempt !== joinAttemptToken) return;
+                        if (data && data.type === 'ROOM_FULL') {
+                            fail('This room is full. Ask the host to create a room with an available seat.');
+                            try { hostConnection.close(); } catch(e) {}
+                            return;
+                        }
                         if (data && data.type === 'WELCOME') {
                             gotWelcome = true;
                             if (joinAttemptTimer) clearTimeout(joinAttemptTimer);
@@ -1680,7 +1695,7 @@
                     });
                     hostConnection.on('close', () => {
                         if (attempt !== joinAttemptToken || gotWelcome) return;
-                        fail('Host connection closed before joining. Confirm the room is still open, then retry.');
+                        fail('Host connection closed before joining. Confirm the host lobby is open and the room code is correct.');
                     });
                     hostConnection.on('error', (err) => {
                         console.warn('PeerJS guest connection error:', err);
@@ -1696,7 +1711,7 @@
                 peer.on('error', (err) => {
                     console.warn('PeerJS Join Error:', err);
                     const type = err && err.type;
-                    if (type === 'peer-unavailable') fail('Room not found or host is offline. Ask the host to create the room again.');
+                    if (type === 'peer-unavailable') fail('Room not found: host room code is not registered. Ask the host to keep the room open, wait for the code to appear, and share the current code.');
                     else if (type === 'network' || type === 'server-error' || type === 'socket-error') fail('Peer service/network issue. Check internet and try again.');
                     else fail('Connection failed (' + (type || 'unknown error') + '). Please retry.');
                 });
@@ -1860,6 +1875,10 @@
                 if (data.reconnect && matchStartedAt) conn.send({type:'GAME_STATE', state:snapshotGame()});
                 updateLobbyUI();
                 broadcastNetworkMsg({ type: 'UPDATE_NAMES', names: onlinePlayerNames, activePlayersList, peerIds: voicePeerIds });
+            } else if (data.type === 'ROOM_FULL') {
+                document.getElementById('lobbyStatusMsg').innerText = 'This room is full. Ask the host to create a new room or free a seat.';
+                document.getElementById('connectionStatus').textContent = 'Room full.';
+                document.getElementById('reconnectBtn').classList.remove('hidden');
             } else if (data.type === 'WELCOME') {
                 if (joinAttemptTimer) clearTimeout(joinAttemptTimer); joinAttemptTimer = null;
                 humanPlayerIdx = data.playerIdx;
